@@ -1,0 +1,29 @@
+name: alirin
+description: Aplikasi PDAM Alirin - Admin & Customer
+
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.0
+  shared_preferences: ^2.2.2
+  intl: ^0.19.0
+  get: ^4.6.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/Alirin logo.png
+    - assets/Alirin.png
+    - assets/Frame 651.png
+    - assets/Frame 652.png
