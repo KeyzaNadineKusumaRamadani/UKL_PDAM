@@ -34,6 +34,11 @@ class _DashboardViewState extends State<DashboardView> {
   @override
   Widget build(BuildContext context) {
     final admin = authController.adminData;
+
+    // Sort customers by ID descending (terbaru di atas)
+    final sortedCustomers = [...customerController.customers]
+      ..sort((a, b) => b.id.compareTo(a.id));
+
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
@@ -57,7 +62,6 @@ class _DashboardViewState extends State<DashboardView> {
                   ),
                   child: Row(
                     children: [
-                      // Avatar admin
                       Container(
                         width: 48,
                         height: 48,
@@ -132,7 +136,6 @@ class _DashboardViewState extends State<DashboardView> {
                           ],
                         ),
                       ),
-                      // Notif icon
                       Container(
                         width: 40,
                         height: 40,
@@ -244,6 +247,7 @@ class _DashboardViewState extends State<DashboardView> {
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Column(
                         children: [
+                          // Payments terbaru
                           ...billController.payments.take(3).map((p) {
                             final isPending = p.isPending;
                             final isVerified = p.isVerified;
@@ -289,11 +293,13 @@ class _DashboardViewState extends State<DashboardView> {
                                       : AppColors.danger,
                             );
                           }),
-                          ...customerController.customers.take(2).map((c) {
+
+                          // Customer terbaru — sortedCustomers sudah urut ID terbesar di atas
+                          ...sortedCustomers.take(3).map((c) {
                             return _ActivityTile(
                               title: 'Customer Baru Terdaftar',
                               subtitle: c.name,
-                              time: '1 jam lalu',
+                              time: 'Baru saja',
                               status: 'Baru',
                               statusColor: AppColors.primary,
                               statusBg: AppColors.primaryLight,

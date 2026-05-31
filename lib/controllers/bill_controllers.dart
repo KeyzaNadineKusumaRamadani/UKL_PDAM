@@ -1,10 +1,9 @@
+import 'dart:developer';
 import 'package:alirin/controllers/auth_controllers.dart';
 import 'package:alirin/controllers/customer_controllers.dart';
 import 'package:alirin/models/bill_models.dart';
 import 'package:alirin/models/payment_models.dart';
 import 'package:alirin/service/api_service.dart';
-
-
 
 class BillController {
   List<BillModel> bills = [];
@@ -31,17 +30,14 @@ class BillController {
 
     bills = data.map((e) => BillModel.fromJson(e)).toList();
 
-    // Deduplikasi
     final seen = <int>{};
     bills = bills.where((b) => seen.add(b.id)).toList();
 
-    // Inject nama customer dari customerController jika customer_name kosong
     _injectCustomerNames();
 
     return result['data'] != null;
   }
 
-  // Cari nama customer dari list customer berdasarkan customer_id
   void _injectCustomerNames() {
     if (customerController.customers.isEmpty) return;
     final custMap = <int, String>{};
@@ -73,14 +69,15 @@ class BillController {
   }
 
   Future<Map<String, dynamic>> addBill(Map<String, dynamic> data) async {
-    // Guard token kosong sebelum kirim request
     if (authController.token.isEmpty) {
       return {'success': false, 'message': 'Token tidak valid, silakan login ulang'};
     }
-    return await ApiService.createBill(authController.token, data);
+    log('ADD BILL data: $data');
+    final result = await ApiService.createBill(authController.token, data);
+    log('ADD BILL response: $result');
+    return result;
   }
 
-  // FIX: tambah editBill untuk update tagihan
   Future<Map<String, dynamic>> editBill(int id, Map<String, dynamic> data) async {
     if (authController.token.isEmpty) {
       return {'success': false, 'message': 'Token tidak valid, silakan login ulang'};
@@ -88,7 +85,6 @@ class BillController {
     final result = await ApiService.updateBill(authController.token, id, data);
     final berhasil = _isSuccess(result);
     if (berhasil) {
-      // Update data lokal supaya tidak perlu fetch ulang
       bills = bills.map((b) {
         if (b.id == id) {
           return BillModel(
@@ -123,17 +119,22 @@ class BillController {
     isLoading = true;
 
     final result = await ApiService.getPayments(authController.token);
+    log('===== FETCH PAYMENTS =====');
+    log('Response: $result');
 
     isLoading = false;
 
     List data = [];
     if (result['data'] != null) {
       data = result['data'];
+      log('Jumlah payments: ${data.length}');
+      if (data.isNotEmpty) log('Sample payment[0]: ${data[0]}');
+    } else {
+      log('DATA NULL! Full response: $result');
     }
 
     payments = data.map((e) => PaymentModel.fromJson(e)).toList();
 
-    // Deduplikasi
     final seen = <int>{};
     payments = payments.where((p) => seen.add(p.id)).toList();
 
@@ -142,9 +143,11 @@ class BillController {
 
   Future<Map<String, dynamic>> verifyPayment(int id) async {
     final result = await ApiService.verifyPayment(authController.token, id);
+    log('VERIFY PAYMENT $id: $result');
 
     final berhasil = _isSuccess(result);
     if (berhasil) {
+      // Update status lokal jadi lunas
       payments = payments.map((p) {
         if (p.id == id) {
           return PaymentModel(
@@ -170,6 +173,7 @@ class BillController {
 
   Future<Map<String, dynamic>> rejectPayment(int id) async {
     final result = await ApiService.rejectPayment(authController.token, id);
+    log('REJECT PAYMENT $id: $result');
 
     final berhasil = _isSuccess(result);
     if (berhasil) {
@@ -203,7 +207,6 @@ class BillController {
     if (msg.contains('success') || msg.contains('verif') ||
         msg.contains('berhasil') || msg.contains('payment') ||
         msg.contains('updated') || msg.contains('deleted')) return true;
-    // Tidak ada field error = sukses
     if (result['error'] == null && result['success'] == null &&
         result['message'] == null) return true;
     return false;

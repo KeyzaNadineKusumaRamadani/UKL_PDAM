@@ -2,6 +2,7 @@ import 'package:alirin/controllers/auth_controllers.dart';
 import 'package:alirin/models/customer_models.dart';
 import 'package:alirin/service/api_service.dart';
 
+
 class CustomerController {
   // Pakai Set id untuk hindari duplikat
   List<CustomerModel> customers = [];
@@ -29,9 +30,12 @@ class CustomerController {
     // Assign langsung, tidak addAll — supaya tidak duplikat
     customers = data.map((e) => CustomerModel.fromJson(e)).toList();
 
-    // Deduplikasi berdasarkan id, jaga-jaga
+    // Deduplikasi berdasarkan id
     final seen = <int>{};
     customers = customers.where((c) => seen.add(c.id)).toList();
+
+    // Sort by id descending — customer terbaru (ID terbesar) muncul di atas
+    customers.sort((a, b) => b.id.compareTo(a.id));
 
     return result['data'] != null;
   }
