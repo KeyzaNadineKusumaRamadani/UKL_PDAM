@@ -3,6 +3,8 @@ import 'package:alirin/controllers/bill_controllers.dart';
 import 'package:alirin/controllers/customer_controllers.dart';
 import 'package:alirin/service/app_collors.dart';
 import 'package:flutter/material.dart';
+
+
 class DashboardView extends StatefulWidget {
   const DashboardView({super.key});
 
@@ -26,7 +28,7 @@ class _DashboardViewState extends State<DashboardView> {
       billController.fetchBills(),
       billController.fetchPayments(),
     ]);
-    setState(() => _isLoading = false);
+    if (mounted) setState(() => _isLoading = false);
   }
 
   @override
@@ -40,173 +42,270 @@ class _DashboardViewState extends State<DashboardView> {
           color: AppColors.primary,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Dashboard',
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            'Selamat datang, ${admin?.name ?? 'Admin'}',
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
+                // ── Header ──
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                  decoration: const BoxDecoration(
+                    color: AppColors.bgCard,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(24),
+                      bottomRight: Radius.circular(24),
                     ),
-                    // Avatar
-                    GestureDetector(
-                      child: Container(
-                        width: 42,
-                        height: 42,
+                  ),
+                  child: Row(
+                    children: [
+                      // Avatar admin
+                      Container(
+                        width: 48,
+                        height: 48,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                          color: AppColors.primaryLight,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.primary.withOpacity(0.3),
+                            width: 2,
                           ),
-                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Center(
-                          child: Text(
-                            admin?.initials ?? 'AD',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/User 02a.png',
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Center(
+                              child: Text(
+                                admin?.initials ?? 'AD',
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Text(
+                                  'Halo Selamat Datang 👋',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryLight,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const Text(
+                                    'Admin',
+                                    style: TextStyle(
+                                      color: AppColors.primary,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              admin?.name.isNotEmpty == true
+                                  ? admin!.name
+                                  : (admin?.username ?? 'Admin'),
+                              style: const TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Notif icon
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.notifications_outlined,
+                            color: AppColors.primary, size: 20),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 24),
+
+                const SizedBox(height: 20),
 
                 if (_isLoading)
                   const Center(
                     child: Padding(
                       padding: EdgeInsets.all(40),
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                      ),
+                      child: CircularProgressIndicator(color: AppColors.primary),
                     ),
                   )
                 else ...[
-                  // Stats grid
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.4,
-                    children: [
-                      _StatCard(
-                        label: 'Total Customer',
-                        value: '${customerController.customers.length}',
-                        sub: '+12 bulan ini',
-                        icon: Icons.people,
-                        color: AppColors.primary,
-                      ),
-                      _StatCard(
-                        label: 'Belum Bayar',
-                        value: '${billController.unpaidBills}',
-                        sub: 'Perlu perhatian',
-                        icon: Icons.warning_amber,
-                        color: AppColors.danger,
-                      ),
-                      _StatCard(
-                        label: 'Tagihan Bulan Ini',
-                        value: '${billController.totalBills}',
-                        sub: 'Aktif',
-                        icon: Icons.receipt_long,
-                        color: AppColors.success,
-                      ),
-                      _StatCard(
-                        label: 'Menunggu Verif',
-                        value: '${billController.pendingPayments}',
-                        sub: 'Bukti bayar',
-                        icon: Icons.pending_actions,
-                        color: AppColors.warning,
-                      ),
-                    ],
+                  // ── Stats Grid ──
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 1.45,
+                      children: [
+                        _StatCard(
+                          label: 'Total Customer',
+                          value: '${customerController.customers.length}',
+                          sub: '↑ 12 Bulan ini',
+                          subColor: AppColors.success,
+                          color: AppColors.primary,
+                          bgColor: AppColors.primaryLight,
+                        ),
+                        _StatCard(
+                          label: 'Tagihan Belum Dibayar',
+                          value: '${billController.unpaidBills}',
+                          sub: 'Perlu diperhatikan',
+                          subColor: AppColors.danger,
+                          color: AppColors.danger,
+                          bgColor: AppColors.dangerLight,
+                        ),
+                        _StatCard(
+                          label: 'Tagihan bulan ini',
+                          value: '${billController.totalBills}',
+                          sub: 'Aktif',
+                          subColor: AppColors.success,
+                          color: AppColors.success,
+                          bgColor: AppColors.successLight,
+                        ),
+                        _StatCard(
+                          label: 'Menunggu Verifikasi',
+                          value: '${billController.pendingPayments}',
+                          sub: 'Bukti Pembayaran',
+                          subColor: AppColors.warning,
+                          color: AppColors.warning,
+                          bgColor: AppColors.warningLight,
+                        ),
+                      ],
+                    ),
                   ),
+
                   const SizedBox(height: 24),
 
-                  // Aktivitas terbaru
-                  const Text(
-                    'AKTIVITAS TERBARU',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.2,
+                  // ── Aktivitas Terbaru ──
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(
+                      'Aktivitas Terbaru',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
 
-                  if (billController.payments.isEmpty)
-                    _EmptyActivity()
+                  if (billController.payments.isEmpty &&
+                      customerController.customers.isEmpty)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(30),
+                        child: Column(
+                          children: [
+                            Icon(Icons.inbox_outlined,
+                                size: 48,
+                                color: AppColors.textMuted.withOpacity(0.5)),
+                            const SizedBox(height: 8),
+                            const Text('Belum ada aktivitas',
+                                style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                    )
                   else
-                    ...billController.payments.take(5).map((p) {
-                      final isPending = p.status == 'pending' ||
-                          p.status == 'menunggu';
-                      final isVerified = p.status == 'lunas' ||
-                          p.status == 'verified';
-                      return _ActivityTile(
-                        title: 'Pembayaran ${isPending ? 'baru' : isVerified ? 'terverifikasi' : 'ditolak'}',
-                        subtitle: p.customerName,
-                        status: isPending
-                            ? 'Pending'
-                            : isVerified
-                                ? 'Lunas'
-                                : 'Ditolak',
-                        statusColor: isPending
-                            ? AppColors.warning
-                            : isVerified
-                                ? AppColors.success
-                                : AppColors.danger,
-                        icon: isPending
-                            ? Icons.payment
-                            : isVerified
-                                ? Icons.check_circle
-                                : Icons.cancel,
-                        iconColor: isPending
-                            ? AppColors.warning
-                            : isVerified
-                                ? AppColors.success
-                                : AppColors.danger,
-                      );
-                    }),
-
-                  // Customer terbaru
-                  if (customerController.customers.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    ...customerController.customers.take(3).map((c) {
-                      return _ActivityTile(
-                        title: 'Customer baru terdaftar',
-                        subtitle: c.name,
-                        status: 'Baru',
-                        statusColor: AppColors.accent,
-                        icon: Icons.person_add,
-                        iconColor: AppColors.accent,
-                      );
-                    }),
-                  ],
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        children: [
+                          ...billController.payments.take(3).map((p) {
+                            final isPending = p.isPending;
+                            final isVerified = p.isVerified;
+                            return _ActivityTile(
+                              title: isPending
+                                  ? 'Pembayaran terbaru'
+                                  : isVerified
+                                      ? 'Pembayaran Terverifikasi'
+                                      : 'Pembayaran Ditolak',
+                              subtitle: p.customerName.isNotEmpty
+                                  ? p.customerName
+                                  : 'Customer',
+                              time: '2 menit lalu',
+                              status: isPending
+                                  ? 'Pending'
+                                  : isVerified
+                                      ? 'Lunas'
+                                      : 'Ditolak',
+                              statusColor: isPending
+                                  ? AppColors.warning
+                                  : isVerified
+                                      ? AppColors.success
+                                      : AppColors.danger,
+                              statusBg: isPending
+                                  ? AppColors.warningLight
+                                  : isVerified
+                                      ? AppColors.successLight
+                                      : AppColors.dangerLight,
+                              icon: isPending
+                                  ? Icons.notifications_outlined
+                                  : isVerified
+                                      ? Icons.check_circle_outline
+                                      : Icons.cancel_outlined,
+                              iconBg: isPending
+                                  ? AppColors.warningLight
+                                  : isVerified
+                                      ? AppColors.successLight
+                                      : AppColors.dangerLight,
+                              iconColor: isPending
+                                  ? AppColors.warning
+                                  : isVerified
+                                      ? AppColors.success
+                                      : AppColors.danger,
+                            );
+                          }),
+                          ...customerController.customers.take(2).map((c) {
+                            return _ActivityTile(
+                              title: 'Customer Baru Terdaftar',
+                              subtitle: c.name,
+                              time: '1 jam lalu',
+                              status: 'Baru',
+                              statusColor: AppColors.primary,
+                              statusBg: AppColors.primaryLight,
+                              icon: Icons.person_add_outlined,
+                              iconBg: AppColors.primaryLight,
+                              iconColor: AppColors.primary,
+                            );
+                          }),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 24),
                 ],
               ],
             ),
@@ -221,49 +320,45 @@ class _StatCard extends StatelessWidget {
   final String label;
   final String value;
   final String sub;
-  final IconData icon;
+  final Color subColor;
   final Color color;
+  final Color bgColor;
 
   const _StatCard({
     required this.label,
     required this.value,
     required this.sub,
-    required this.icon,
+    required this.subColor,
     required this.color,
+    required this.bgColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 11,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: color, size: 16),
-              ),
-            ],
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,15 +367,16 @@ class _StatCard extends StatelessWidget {
                 value,
                 style: TextStyle(
                   color: color,
-                  fontSize: 26,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
                 sub,
-                style: const TextStyle(
-                  color: AppColors.textMuted,
+                style: TextStyle(
+                  color: subColor,
                   fontSize: 10,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
@@ -294,38 +390,50 @@ class _StatCard extends StatelessWidget {
 class _ActivityTile extends StatelessWidget {
   final String title;
   final String subtitle;
+  final String time;
   final String status;
   final Color statusColor;
+  final Color statusBg;
   final IconData icon;
+  final Color iconBg;
   final Color iconColor;
 
   const _ActivityTile({
     required this.title,
     required this.subtitle,
+    required this.time,
     required this.status,
     required this.statusColor,
+    required this.statusBg,
     required this.icon,
+    required this.iconBg,
     required this.iconColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 6,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            width: 38,
-            height: 38,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(10),
+              color: iconBg,
+              shape: BoxShape.circle,
             ),
             child: Icon(icon, color: iconColor, size: 18),
           ),
@@ -339,62 +447,43 @@ class _ActivityTile extends StatelessWidget {
                   style: const TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 Text(
-                  subtitle,
+                  '$subtitle • $time',
                   style: const TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
                   ),
                 ),
               ],
             ),
           ),
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              status,
-              style: TextStyle(
-                color: statusColor,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusBg,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right,
+                  color: AppColors.textMuted, size: 18),
+            ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _EmptyActivity extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(30),
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: const Center(
-        child: Column(
-          children: [
-            Icon(Icons.inbox, color: AppColors.textMuted, size: 36),
-            SizedBox(height: 8),
-            Text(
-              'Belum ada aktivitas',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 13),
-            ),
-          ],
-        ),
       ),
     );
   }

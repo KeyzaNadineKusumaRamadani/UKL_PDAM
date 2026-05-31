@@ -1,7 +1,9 @@
 import 'package:alirin/controllers/auth_controllers.dart';
 import 'package:alirin/service/app_collors.dart';
 import 'package:flutter/material.dart';
+
 import 'login_view.dart';
+import 'edit_profile_view.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
@@ -11,6 +13,8 @@ class ProfileView extends StatefulWidget {
 }
 
 class _ProfileViewState extends State<ProfileView> {
+  bool _isLoading = false;
+
   @override
   void initState() {
     super.initState();
@@ -18,8 +22,9 @@ class _ProfileViewState extends State<ProfileView> {
   }
 
   Future<void> _loadProfile() async {
+    setState(() => _isLoading = true);
     await authController.loadAdminProfile();
-    if (mounted) setState(() {});
+    if (mounted) setState(() => _isLoading = false);
   }
 
   void _logout() {
@@ -27,12 +32,9 @@ class _ProfileViewState extends State<ProfileView> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.bgCard,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Keluar & Hapus Sesi?',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 17),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Keluar & Hapus Sesi?',
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
         content: const Text(
           'Kamu akan keluar dari aplikasi dan sesi akan dihapus.',
           style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
@@ -46,8 +48,7 @@ class _ProfileViewState extends State<ProfileView> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.danger,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () {
               authController.logout();
@@ -57,8 +58,7 @@ class _ProfileViewState extends State<ProfileView> {
                 (_) => false,
               );
             },
-            child: const Text('Keluar',
-                style: TextStyle(color: Colors.white)),
+            child: const Text('Keluar', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -72,137 +72,225 @@ class _ProfileViewState extends State<ProfileView> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              const SizedBox(height: 10),
-              // Title
-              const Text(
-                'PROFIL ADMIN',
-                style: TextStyle(
-                  color: AppColors.textMuted,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 2,
-                ),
-              ),
-              const SizedBox(height: 30),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+            : RefreshIndicator(
+                onRefresh: _loadProfile,
+                color: AppColors.primary,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 10),
+                      const Text(
+                        'PROFIL ADMIN',
+                        style: TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      const SizedBox(height: 30),
 
-              // Avatar besar
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF6366F1).withOpacity(0.4),
-                      blurRadius: 20,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    admin?.initials ?? 'AD',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 30,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                admin?.name ?? 'Admin PDAM',
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'Administrator PDAM',
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
+                      // ── Avatar dengan asset image ──
+                      Stack(
+                        alignment: Alignment.bottomRight,
+                        children: [
+                          Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.primary.withOpacity(0.3),
+                                width: 3,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withOpacity(0.15),
+                                  blurRadius: 20,
+                                  spreadRadius: 3,
+                                ),
+                              ],
+                            ),
+                            child: ClipOval(
+                              child: Image.asset(
+                                'assets/User 02a.png',
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) {
+                                  // Fallback: inisial jika asset tidak ada
+                                  return Container(
+                                    decoration: const BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        admin?.initials ?? 'AD',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 32,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          // Badge edit kecil
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: const Icon(Icons.edit, color: Colors.white, size: 13),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
 
-              // Info tiles
-              _InfoCard(children: [
-                _InfoRow(
-                  icon: Icons.person_outline,
-                  label: 'Username',
-                  value: admin?.username ?? '-',
-                ),
-                const _Divider(),
-                _InfoRow(
-                  icon: Icons.phone_outlined,
-                  label: 'No. Telepon',
-                  value: admin?.phone ?? '-',
-                ),
-                const _Divider(),
-                _InfoRow(
-                  icon: Icons.shield_outlined,
-                  label: 'Role',
-                  value: admin?.role ?? 'ADMIN',
-                  valueColor: AppColors.primary,
-                ),
-                const _Divider(),
-                _InfoRow(
-                  icon: Icons.edit_outlined,
-                  label: 'Edit Profil',
-                  value: 'Tidak tersedia (endpoint belum ada)',
-                  valueColor: AppColors.textMuted,
-                ),
-              ]),
+                      // Nama
+                      Text(
+                        admin?.name.isNotEmpty == true
+                            ? admin!.name
+                            : (admin?.username ?? 'Admin PDAM'),
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          'Administrator PDAM',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
 
-              const SizedBox(height: 30),
+                      // Info tiles
+                      _InfoCard(children: [
+                        _InfoRow(
+                          icon: Icons.person_outline,
+                          label: 'Username',
+                          value: admin?.username.isNotEmpty == true
+                              ? admin!.username
+                              : 'Tidak tersedia',
+                          trailing: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.textMuted.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: const Text('Readonly',
+                                style: TextStyle(color: AppColors.textMuted, fontSize: 10)),
+                          ),
+                        ),
+                        const _Divider(),
+                        _InfoRow(
+                          icon: Icons.badge_outlined,
+                          label: 'Nama',
+                          value: admin?.name.isNotEmpty == true ? admin!.name : '-',
+                        ),
+                        const _Divider(),
+                        _InfoRow(
+                          icon: Icons.phone_outlined,
+                          label: 'No. Telepon',
+                          value: admin?.phone.isNotEmpty == true ? admin!.phone : '-',
+                        ),
+                        const _Divider(),
+                        _InfoRow(
+                          icon: Icons.shield_outlined,
+                          label: 'Role',
+                          value: admin?.role ?? 'ADMIN',
+                          valueColor: AppColors.primary,
+                        ),
+                      ]),
+                      const SizedBox(height: 14),
 
-              // Logout button
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.logout, size: 18),
-                  label: const Text(
-                    '🚪 Keluar & Hapus Sesi',
-                    style: TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w600),
+                      // Edit Profil
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          label: const Text('Edit Profil',
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                          onPressed: () async {
+                            final changed = await Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const EditProfileView()),
+                            );
+                            if (changed == true && mounted) setState(() {});
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Refresh
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.refresh, size: 16, color: AppColors.accent),
+                          label: const Text('Refresh Profil',
+                              style: TextStyle(color: AppColors.accent)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppColors.accent),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: _loadProfile,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Logout
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.logout, size: 18),
+                          label: const Text('🚪 Keluar & Hapus Sesi',
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.danger,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                          onPressed: _logout,
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                    ],
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.danger,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  onPressed: _logout,
                 ),
               ),
-              const SizedBox(height: 30),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -232,12 +320,14 @@ class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
   final Color? valueColor;
+  final Widget? trailing;
 
   const _InfoRow({
     required this.icon,
     required this.label,
     required this.value,
     this.valueColor,
+    this.trailing,
   });
 
   @override
@@ -260,23 +350,19 @@ class _InfoRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                      color: AppColors.textMuted, fontSize: 11),
-                ),
+                Text(label,
+                    style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
                 const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: TextStyle(
-                    color: valueColor ?? AppColors.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text(value,
+                    style: TextStyle(
+                      color: valueColor ?? AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    )),
               ],
             ),
           ),
+          if (trailing != null) trailing!,
         ],
       ),
     );
@@ -288,10 +374,6 @@ class _Divider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Divider(
-      height: 1,
-      color: AppColors.border,
-      indent: 16,
-      endIndent: 16,
-    );
+        height: 1, color: AppColors.border, indent: 16, endIndent: 16);
   }
 }

@@ -2,6 +2,7 @@ import 'package:alirin/controllers/service_controllers.dart';
 import 'package:alirin/service/app_collors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
 
@@ -22,7 +23,6 @@ class _AddServiceViewState extends State<AddServiceView> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
 
     final data = {
@@ -33,27 +33,22 @@ class _AddServiceViewState extends State<AddServiceView> {
     };
 
     final result = await serviceController.addService(data);
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
-    if (!mounted) return;
-
     if (result['data'] != null || result['success'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Layanan berhasil ditambahkan!'),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('✅ Layanan berhasil ditambahkan!'),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+      ));
       Navigator.pop(context);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message'] ?? 'Gagal menambah layanan'),
-          backgroundColor: AppColors.danger,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(result['message'] ?? 'Gagal menambah layanan'),
+        backgroundColor: AppColors.danger,
+        behavior: SnackBarBehavior.floating,
+      ));
     }
   }
 
@@ -71,19 +66,14 @@ class _AddServiceViewState extends State<AddServiceView> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: AppColors.bg,
+        backgroundColor: AppColors.bgCard,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Tambah Layanan Baru',
-          style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Tambah Layanan',
+            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -91,49 +81,67 @@ class _AddServiceViewState extends State<AddServiceView> {
           child: Form(
             key: _formKey,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CustomTextField(
                   label: 'Nama Layanan',
-                  hint: 'Layanan Tetap',
+                  hint: 'Contoh: Layanan Tetap',
                   controller: _nameCtrl,
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Nama wajib diisi' : null,
+                  validator: (v) => v == null || v.isEmpty ? 'Nama wajib diisi' : null,
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 CustomTextField(
                   label: 'Min Pemakaian (m³)',
-                  hint: '40',
+                  hint: 'Contoh: 40',
                   controller: _minCtrl,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Min pemakaian wajib diisi' : null,
+                  validator: (v) => v == null || v.isEmpty ? 'Min pemakaian wajib diisi' : null,
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 CustomTextField(
                   label: 'Max Pemakaian (m³)',
-                  hint: '100',
+                  hint: 'Contoh: 100',
                   controller: _maxCtrl,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Max pemakaian wajib diisi' : null,
+                  validator: (v) => v == null || v.isEmpty ? 'Max pemakaian wajib diisi' : null,
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 CustomTextField(
                   label: 'Tarif (Rp/m³)',
-                  hint: '10000',
+                  hint: 'Contoh: 10000',
                   controller: _priceCtrl,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Tarif wajib diisi' : null,
+                  validator: (v) => v == null || v.isEmpty ? 'Tarif wajib diisi' : null,
                 ),
                 const SizedBox(height: 28),
-                CustomButton(
-                  text: 'Simpan Layanan',
-                  isLoading: _isLoading,
-                  onPressed: _save,
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.border),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text('Batal',
+                            style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: CustomButton(
+                        text: 'Simpan',
+                        isLoading: _isLoading,
+                        onPressed: _save,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

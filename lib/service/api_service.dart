@@ -47,6 +47,21 @@ class ApiService {
     }
   }
 
+  // ===================== UPDATE ADMIN =====================
+  static Future<Map<String, dynamic>> updateAdmin(
+      String token, int id, Map<String, dynamic> data) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/admins/$id'),
+        headers: headers(token),
+        body: jsonEncode(data),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': 'Gagal update profil: $e'};
+    }
+  }
+
   // ===================== CUSTOMERS =====================
   static Future<Map<String, dynamic>> getCustomers(String token,
       {int page = 1, int quantity = 20, String search = ''}) async {
@@ -179,6 +194,21 @@ class ApiService {
       return jsonDecode(response.body);
     } catch (e) {
       return {'success': false, 'message': 'Gagal membuat tagihan: $e'};
+    }
+  }
+
+  // FIX: tambah updateBill untuk fitur edit tagihan
+  static Future<Map<String, dynamic>> updateBill(
+      String token, int id, Map<String, dynamic> data) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/bills/$id'),
+        headers: headers(token),
+        body: jsonEncode(data),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': 'Gagal update tagihan: $e'};
     }
   }
 

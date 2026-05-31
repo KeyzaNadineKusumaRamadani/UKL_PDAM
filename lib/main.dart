@@ -14,14 +14,24 @@ class MyApp extends StatelessWidget {
       title: 'Alirin - PDAM Admin',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0A0E1A),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF3B82F6),
-          secondary: Color(0xFF06B6D4),
-          surface: Color(0xFF111827),
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: const Color(0xFFF5F7FF),
+        colorScheme: const ColorScheme.light(
+          primary: Color(0xFF1565FF),
+          secondary: Color(0xFF00B8D4),
+          surface: Color(0xFFFFFFFF),
         ),
         fontFamily: 'sans-serif',
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFFF5F7FF),
+          elevation: 0,
+          iconTheme: IconThemeData(color: Color(0xFF1A1A2E)),
+          titleTextStyle: TextStyle(
+            color: Color(0xFF1A1A2E),
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       home: const SplashView(),
     );

@@ -1,4 +1,3 @@
-
 import 'package:alirin/models/model_service.dart';
 import 'package:alirin/service/app_collors.dart';
 import 'package:flutter/material.dart';
@@ -20,88 +19,99 @@ class ServiceTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 6,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.accent.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.water_drop,
-                    color: AppColors.accent, size: 20),
-              ),
-              const SizedBox(width: 10),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      service.name,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                      ),
-                    ),
-                    Text(
-                      'Min: ${service.minUsage.toStringAsFixed(0)} m³  Max: ${service.maxUsage.toStringAsFixed(0)} m³',
-                      style: const TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  service.name,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
                 ),
               ),
-              Text(
-                service.priceFormatted,
-                style: const TextStyle(
-                  color: AppColors.accent,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+              // Status aktif
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.successLight,
+                  borderRadius: BorderRadius.circular(20),
                 ),
-              ),
-              const Text(
-                '/m³',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                child: const Text(
+                  'Aktif',
+                  style: TextStyle(
+                    color: AppColors.success,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Text(
+                'Min: ${service.minUsage.toStringAsFixed(0)} m³',
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 12),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Max: ${service.maxUsage.toStringAsFixed(0)} m³',
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 12),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${service.priceFormatted} / m³',
+            style: const TextStyle(
+              color: AppColors.primary,
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: GestureDetector(
                   onTap: onEdit,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 9),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(8),
+                      color: AppColors.primaryLight,
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.edit_outlined,
-                            color: AppColors.primary, size: 14),
+                            color: AppColors.primary, size: 16),
                         SizedBox(width: 4),
-                        Text(
-                          'Edit',
-                          style: TextStyle(
-                              color: AppColors.primary,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500),
-                        ),
+                        Text('Edit',
+                            style: TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ),
@@ -112,24 +122,22 @@ class ServiceTile extends StatelessWidget {
                 child: GestureDetector(
                   onTap: onDelete,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 9),
                     decoration: BoxDecoration(
-                      color: AppColors.danger.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(8),
+                      color: AppColors.dangerLight,
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.delete_outline,
-                            color: AppColors.danger, size: 14),
+                            color: AppColors.danger, size: 16),
                         SizedBox(width: 4),
-                        Text(
-                          'Hapus',
-                          style: TextStyle(
-                              color: AppColors.danger,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500),
-                        ),
+                        Text('Hapus',
+                            style: TextStyle(
+                                color: AppColors.danger,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ),

@@ -15,27 +15,16 @@ class MainView extends StatefulWidget {
 
 class _MainViewState extends State<MainView> {
   int _selectedIndex = 0;
-  // Simpan halaman yang sudah pernah dibuka agar tidak rebuild ulang
   final Map<int, Widget> _pageCache = {};
 
   Widget _buildPage(int index) {
     if (!_pageCache.containsKey(index)) {
       switch (index) {
-        case 0:
-          _pageCache[index] = const DashboardView();
-          break;
-        case 1:
-          _pageCache[index] = const ServiceView();
-          break;
-        case 2:
-          _pageCache[index] = const CustomerView();
-          break;
-        case 3:
-          _pageCache[index] = const BillView();
-          break;
-        case 4:
-          _pageCache[index] = const ProfileView();
-          break;
+        case 0: _pageCache[index] = const DashboardView(); break;
+        case 1: _pageCache[index] = const ServiceView(); break;
+        case 2: _pageCache[index] = const CustomerView(); break;
+        case 3: _pageCache[index] = const BillView(); break;
+        case 4: _pageCache[index] = const ProfileView(); break;
       }
     }
     return _pageCache[index]!;
@@ -45,22 +34,20 @@ class _MainViewState extends State<MainView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
-      // Pakai Offstage agar halaman tidak di-rebuild saat pindah tab
-      // tapi tetap hidup di memory (tidak reset state)
       body: Stack(
-        children: List.generate(5, (i) {
-          return Offstage(
-            offstage: _selectedIndex != i,
-            child: _buildPage(i),
-          );
-        }),
+        children: List.generate(5,
+          (i) => Offstage(offstage: _selectedIndex != i, child: _buildPage(i))),
       ),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF0D1526),
-          border: Border(
-            top: BorderSide(color: AppColors.border, width: 1),
-          ),
+        decoration: BoxDecoration(
+          color: AppColors.bgCard,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, -2),
+            ),
+          ],
         ),
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
@@ -72,11 +59,12 @@ class _MainViewState extends State<MainView> {
           unselectedItemColor: AppColors.textMuted,
           selectedFontSize: 11,
           unselectedFontSize: 11,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_outlined),
-              activeIcon: Icon(Icons.dashboard),
-              label: 'Dashboard',
+              activeIcon: Icon(Icons.dashboard_rounded),
+              label: 'Dash board',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.water_drop_outlined),
@@ -96,7 +84,7 @@ class _MainViewState extends State<MainView> {
             BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),
               activeIcon: Icon(Icons.person),
-              label: 'Profil',
+              label: 'Profile',
             ),
           ],
         ),

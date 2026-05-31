@@ -1,8 +1,6 @@
 import 'package:alirin/controllers/auth_controllers.dart';
 import 'package:alirin/service/app_collors.dart';
-import 'package:alirin/views/customer_loginView.dart';
 import 'package:flutter/material.dart';
-
 
 import 'main_view.dart';
 
@@ -15,7 +13,6 @@ class LoginView extends StatefulWidget {
 
 class _LoginViewState extends State<LoginView> {
   final _formKey = GlobalKey<FormState>();
-
   final _usernameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
 
@@ -32,7 +29,6 @@ class _LoginViewState extends State<LoginView> {
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
 
     final result = await authController.login(
@@ -41,23 +37,19 @@ class _LoginViewState extends State<LoginView> {
     );
 
     if (!mounted) return;
-
     setState(() => _isLoading = false);
 
     if (result['success'] == true) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => const MainView(),
-        ),
+        MaterialPageRoute(builder: (_) => const MainView()),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            result['message'] ?? 'Login gagal',
-          ),
+          content: Text(result['message'] ?? 'Login gagal'),
           backgroundColor: AppColors.danger,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -67,231 +59,106 @@ class _LoginViewState extends State<LoginView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 28,
-            vertical: 20,
-          ),
-
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
           child: Form(
             key: _formKey,
-
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
                 const SizedBox(height: 10),
 
+                // Back button
                 IconButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-
-                  icon: const Icon(
-                    Icons.arrow_back_ios_new,
-                    color: Colors.black,
-                    size: 22,
-                  ),
-
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back_ios_new,
+                      color: Colors.black, size: 20),
                   padding: EdgeInsets.zero,
                 ),
 
-                const SizedBox(height: 35),
+                const SizedBox(height: 30),
 
+                // Judul
                 const Text(
-                  "Hai Selamat\ndatang kembali",
-
+                  'Hai admin siap\nmemulai harimu?',
                   style: TextStyle(
-                    fontSize: 38,
+                    fontSize: 32,
                     fontWeight: FontWeight.w800,
-                    height: 1.05,
+                    height: 1.15,
                     color: Colors.black,
                   ),
                 ),
-
-                const SizedBox(height: 12),
-
+                const SizedBox(height: 10),
                 const Text(
-                  "Masuk sebagai admin PDAM",
-
+                  'Layani pelanggan dengan ramah',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Color(0xff8B8B8B),
+                    color: Color(0xFF0066D6),
                     fontWeight: FontWeight.w400,
                   ),
                 ),
 
-                const SizedBox(height: 40),
+                const SizedBox(height: 36),
 
-                // EMAIL
-                Container(
-                  height: 58,
+                // Field Email
+                _buildField(
+                  controller: _usernameCtrl,
+                  hint: 'Email',
+                  icon: Icons.mail_outline_rounded,
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'Email wajib diisi' : null,
+                ),
+                const SizedBox(height: 16),
 
-                  decoration: BoxDecoration(
-                    borderRadius:
-                        BorderRadius.circular(14),
-
-                    border: Border.all(
-                      color: const Color(0xff8D8D8D),
+                // Field Password
+                _buildField(
+                  controller: _passwordCtrl,
+                  hint: 'Password',
+                  icon: Icons.lock_outline_rounded,
+                  obscure: _obscure,
+                  suffixIcon: IconButton(
+                    onPressed: () => setState(() => _obscure = !_obscure),
+                    icon: Icon(
+                      _obscure
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: const Color(0xFF0066D6),
+                      size: 20,
                     ),
                   ),
-
-                  child: TextFormField(
-                    controller: _usernameCtrl,
-
-                    style: const TextStyle(
-                      color: Colors.black,
-                    ),
-
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-
-                      hintText: "Email",
-
-                      hintStyle: const TextStyle(
-                        color: Color(0xffAFAFAF),
-                      ),
-
-                      prefixIcon: const Icon(
-                        Icons.mail_outline_rounded,
-                        color: Color(0xff0066D6),
-                      ),
-
-                      contentPadding:
-                          const EdgeInsets.symmetric(
-                        vertical: 16,
-                      ),
-                    ),
-
-                    validator: (v) {
-                      if (v == null || v.isEmpty) {
-                        return 'Email wajib diisi';
-                      }
-
-                      return null;
-                    },
-                  ),
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'Password wajib diisi' : null,
                 ),
 
                 const SizedBox(height: 16),
 
-                // PASSWORD
-                Container(
-                  height: 58,
-
-                  decoration: BoxDecoration(
-                    borderRadius:
-                        BorderRadius.circular(14),
-
-                    border: Border.all(
-                      color: const Color(0xff8D8D8D),
-                    ),
-                  ),
-
-                  child: TextFormField(
-                    controller: _passwordCtrl,
-
-                    obscureText: _obscure,
-
-                    style: const TextStyle(
-                      color: Colors.black,
-                    ),
-
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-
-                      hintText: "Password",
-
-                      hintStyle: const TextStyle(
-                        color: Color(0xffAFAFAF),
-                      ),
-
-                      prefixIcon: const Icon(
-                        Icons.lock_outline_rounded,
-                        color: Color(0xff0066D6),
-                      ),
-
-                      suffixIcon: IconButton(
-                        onPressed: () {
-                          setState(() {
-                            _obscure = !_obscure;
-                          });
-                        },
-
-                        icon: Icon(
-                          _obscure
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
-
-                          color: const Color(0xff0066D6),
-                        ),
-                      ),
-
-                      contentPadding:
-                          const EdgeInsets.symmetric(
-                        vertical: 16,
-                      ),
-                    ),
-
-                    validator: (v) {
-                      if (v == null || v.isEmpty) {
-                        return 'Password wajib diisi';
-                      }
-
-                      return null;
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 18),
-
+                // Remember me & Forgot password
                 Row(
-                  mainAxisAlignment:
-                      MainAxisAlignment.spaceBetween,
-
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-
                     Row(
                       children: [
-
                         SizedBox(
                           width: 22,
                           height: 22,
-
                           child: Checkbox(
                             value: _rememberMe,
-
-                            activeColor:
-                                const Color(0xff0066D6),
-
-                            shape:
-                                RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(5),
+                            activeColor: const Color(0xFF0066D6),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5),
                             ),
-
                             side: const BorderSide(
-                              color: Color(0xff0066D6),
+                              color: Color(0xFF0066D6),
                               width: 1.5,
                             ),
-
-                            onChanged: (v) {
-                              setState(() {
-                                _rememberMe = v ?? false;
-                              });
-                            },
+                            onChanged: (v) =>
+                                setState(() => _rememberMe = v ?? false),
                           ),
                         ),
-
                         const SizedBox(width: 8),
-
                         const Text(
-                          "Remember me",
-
+                          'Remember me',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.black,
@@ -299,18 +166,19 @@ class _LoginViewState extends State<LoginView> {
                         ),
                       ],
                     ),
-
                     TextButton(
                       onPressed: () {},
-
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                       child: const Text(
-                        "Forgot password?",
-
+                        'Forgot password?',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.black,
-                          decoration:
-                              TextDecoration.underline,
+                          decoration: TextDecoration.underline,
                         ),
                       ),
                     ),
@@ -319,37 +187,34 @@ class _LoginViewState extends State<LoginView> {
 
                 const SizedBox(height: 28),
 
+                // Tombol Login
                 SizedBox(
                   width: double.infinity,
                   height: 56,
-
                   child: ElevatedButton(
-                    onPressed:
-                        _isLoading ? null : _login,
-
+                    onPressed: _isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          const Color(0xff0066D6),
-
+                      backgroundColor: const Color(0xFF0066D6),
+                      disabledBackgroundColor:
+                          const Color(0xFF0066D6).withOpacity(0.6),
                       elevation: 6,
-
                       shadowColor:
-                          const Color(0xff0066D6)
-                              .withOpacity(0.35),
-
+                          const Color(0xFF0066D6).withOpacity(0.35),
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-
                     child: _isLoading
-                        ? const CircularProgressIndicator(
-                            color: Colors.white,
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
                           )
                         : const Text(
-                            "Log in",
-
+                            'Log in',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
@@ -359,99 +224,83 @@ class _LoginViewState extends State<LoginView> {
                   ),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 40),
 
-                Row(
-                  children: [
-
-                    Expanded(
-                      child: Divider(
-                        color: Colors.grey.shade400,
-                        thickness: 1,
-                      ),
-                    ),
-
-                    const Padding(
-                      padding:
-                          EdgeInsets.symmetric(
-                        horizontal: 10,
-                      ),
-
-                      child: Text(
-                        "Atau login sebagai customer",
-
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ),
-
-                    Expanded(
-                      child: Divider(
-                        color: Colors.grey.shade400,
-                        thickness: 1,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 30),
-
-                // CUSTOMER CARD
+                // Logo + Alirin di bawah
                 Center(
-                  child: GestureDetector(
-
-                    onTap: () {
-
-                      Navigator.pushReplacement(
-
-                        context,
-
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              const CustomerLoginView(),
-                        ),
-                      );
-                    },
-
-                    child: Container(
-                      width: 290,
-
-                      decoration: BoxDecoration(
-                        borderRadius:
-                            BorderRadius.circular(28),
-
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xff0066D6)
-                                .withOpacity(0.25),
-
-                            blurRadius: 14,
-                            spreadRadius: 2,
-                          ),
-                        ],
+                  child: Column(
+                    children: [
+                      Image.asset(
+                        'assets/Alirin logo.png',
+                        height: 100,
+                        fit: BoxFit.contain,
                       ),
-
-                      child: ClipRRect(
-                        borderRadius:
-                            BorderRadius.circular(28),
-
-                        child: Image.asset(
-                          'assets/Frame 651.png',
-                          fit: BoxFit.cover,
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Alirin',
+                        style: TextStyle(
+                          color: Color(0xFF0066D6),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
 
-                const SizedBox(height: 40),
+                const SizedBox(height: 20),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    bool obscure = false,
+    Widget? suffixIcon,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscure,
+      style: const TextStyle(color: Colors.black, fontSize: 14),
+      decoration: InputDecoration(
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFF8D8D8D)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFF8D8D8D)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFF0066D6), width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Colors.red, width: 1.5),
+        ),
+        hintText: hint,
+        hintStyle: const TextStyle(color: Color(0xFFAFAFAF), fontSize: 14),
+        prefixIcon: Icon(icon, color: const Color(0xFF0066D6), size: 20),
+        suffixIcon: suffixIcon,
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      validator: validator,
     );
   }
 }
