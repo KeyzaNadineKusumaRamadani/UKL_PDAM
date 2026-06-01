@@ -143,7 +143,11 @@ class _CustomerViewState extends State<CustomerView> {
 class _DeleteDialog extends StatefulWidget {
   final CustomerModel customer;
   final VoidCallback onDeleted;
-  const _DeleteDialog({required this.customer, required this.onDeleted});
+
+  const _DeleteDialog({
+    required this.customer,
+    required this.onDeleted,
+  });
 
   @override
   State<_DeleteDialog> createState() => _DeleteDialogState();
@@ -151,66 +155,168 @@ class _DeleteDialog extends StatefulWidget {
 
 class _DeleteDialogState extends State<_DeleteDialog> {
   bool _isDeleting = false;
+  String _status = '';
 
   Future<void> _hapus() async {
-    setState(() => _isDeleting = true);
-    final result = await customerController.removeCustomerSafe(widget.customer.id);
+    setState(() {
+      _isDeleting = true;
+      _status = 'Menghapus customer...';
+    });
+
+    final result =
+        await customerController.removeCustomerSafe(widget.customer.id);
+
     if (!mounted) return;
+
     setState(() => _isDeleting = false);
+
+    final berhasil = result['success'] == true;
+
     Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(result['success'] == true
-          ? '✅ Customer ${widget.customer.name} berhasil dihapus'
-          : '❌ ${result['message'] ?? 'Gagal hapus customer'}'),
-      backgroundColor: result['success'] == true ? AppColors.success : AppColors.danger,
-      behavior: SnackBarBehavior.floating,
-    ));
-    if (result['success'] == true) widget.onDeleted();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          berhasil
+              ? '✅ Customer "${widget.customer.name}" berhasil dihapus'
+              : '❌ ${result['message'] ?? 'Gagal hapus customer'}',
+        ),
+        backgroundColor:
+            berhasil ? AppColors.success : AppColors.danger,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    if (berhasil) {
+      widget.onDeleted();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: AppColors.bgCard,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Row(children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: AppColors.dangerLight, shape: BoxShape.circle),
-          child: const Icon(Icons.delete_outline, color: AppColors.danger, size: 20),
-        ),
-        const SizedBox(width: 10),
-        const Text('Hapus  Customer?',
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
-      ]),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.dangerLight,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.delete_outline,
+              color: AppColors.danger,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Hapus Customer?',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ],
+      ),
       content: _isDeleting
-          ? const Column(mainAxisSize: MainAxisSize.min, children: [
-              CircularProgressIndicator(color: AppColors.primary),
-              SizedBox(height: 12),
-              Text('Menghapus data...', style: TextStyle(color: AppColors.textSecondary)),
-            ])
-          : RichText(text: TextSpan(
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const TextSpan(text: 'Apakah kamu yakin ingin menghapus '),
-                TextSpan(text: widget.customer.name,
-                  style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
-                const TextSpan(text: '? Data tidak bisa dikembalikan.'),
-              ])),
-      actions: _isDeleting ? [] : [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Batal', style: TextStyle(color: AppColors.textSecondary)),
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.danger,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            elevation: 0),
-          onPressed: _hapus,
-          child: const Text('Hapus', style: TextStyle(color: Colors.white)),
-        ),
-      ],
+                const CircularProgressIndicator(
+                  color: AppColors.primary,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _status,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RichText(
+                  text: TextSpan(
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                    children: [
+                      const TextSpan(
+                        text: 'Hapus customer ',
+                      ),
+                      TextSpan(
+                        text: '"${widget.customer.name}"',
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const TextSpan(
+                        text: '?',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.warningLight,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color:
+                          AppColors.warning.withOpacity(0.3),
+                    ),
+                  ),
+                  child: const Text(
+                    '⚠️ Semua data tagihan customer terkait juga dapat terhapus otomatis.',
+                    style: TextStyle(
+                      color: AppColors.warning,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+      actions: _isDeleting
+          ? []
+          : [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Batal',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.danger,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 0,
+                ),
+                onPressed: _hapus,
+                child: const Text(
+                  'Hapus',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
     );
   }
 }

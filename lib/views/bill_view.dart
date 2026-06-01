@@ -411,28 +411,35 @@ class _PaymentCard extends StatelessWidget {
     final isPending = payment.isPending;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppColors.border,
+        ),
       ),
       child: Column(
         children: [
           Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
-                  color: AppColors.bgCard2,
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.bg,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(Icons.receipt,
-                    color: AppColors.textMuted, size: 22),
+                child: const Icon(
+                  Icons.receipt,
+                  color: AppColors.textMuted,
+                  size: 28,
+                ),
               ),
-              const SizedBox(width: 12),
+
+              const SizedBox(width: 14),
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -442,28 +449,37 @@ class _PaymentCard extends StatelessWidget {
                           ? payment.customerName
                           : 'Customer',
                       style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14),
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
+
+                    const SizedBox(height: 4),
+
                     Text(
                       '${payment.monthName} ${payment.year}  •  ${payment.totalFormatted}',
                       style: const TextStyle(
-                          color: AppColors.textMuted, fontSize: 12),
+                        color: AppColors.textMuted,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
               ),
+
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 3),
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: isVerified
                       ? AppColors.success.withOpacity(0.15)
                       : isRejected
                           ? AppColors.danger.withOpacity(0.15)
                           : AppColors.warning.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   isVerified
@@ -477,15 +493,78 @@ class _PaymentCard extends StatelessWidget {
                         : isRejected
                             ? AppColors.danger
                             : AppColors.warning,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ],
           ),
+
+          const SizedBox(height: 14),
+
+          // STATUS VERIFIED
+          if (isVerified)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.success.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.check_box,
+                    color: AppColors.success,
+                    size: 18,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Sudah diverifikasi',
+                    style: TextStyle(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // STATUS DITOLAK
+          if (isRejected)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.close,
+                    color: AppColors.danger,
+                    size: 20,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Pembayaran ditolak',
+                    style: TextStyle(
+                      color: AppColors.danger,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // STATUS PENDING
           if (isPending) ...[
-            const SizedBox(height: 10),
             Row(
               children: [
                 if (onVerify != null)
@@ -493,41 +572,51 @@ class _PaymentCard extends StatelessWidget {
                     child: GestureDetector(
                       onTap: onVerify,
                       child: Container(
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 9),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.success.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Center(
-                          child: Text('✅ Verifikasi',
-                              style: TextStyle(
-                                  color: AppColors.success,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600)),
+                          child: Text(
+                            '✅ Verifikasi',
+                            style: TextStyle(
+                              color: AppColors.success,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
+
                 if (onVerify != null && onReject != null)
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
+
                 if (onReject != null)
                   Expanded(
                     child: GestureDetector(
                       onTap: onReject,
                       child: Container(
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 9),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.danger.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Center(
-                          child: Text('❌ Tolak',
-                              style: TextStyle(
-                                  color: AppColors.danger,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600)),
+                          child: Text(
+                            '❌ Tolak',
+                            style: TextStyle(
+                              color: AppColors.danger,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -540,7 +629,6 @@ class _PaymentCard extends StatelessWidget {
     );
   }
 }
-
 // ── Form Buat Tagihan ──
 class _CreateBillSheet extends StatefulWidget {
   const _CreateBillSheet();

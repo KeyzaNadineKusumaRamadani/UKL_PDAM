@@ -374,7 +374,7 @@ class _CustomerBerandaTab extends StatelessWidget {
                   backgroundColor: AppColors.primaryLight,
                   child: Icon(Icons.person, color: AppColors.primary),
                 ),
-                
+
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -1252,7 +1252,8 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
       setState(() {
         _serviceLoading = false;
         final data = res['data'] ?? res;
-        if (data is Map<String, dynamic> && (res['success'] == true || res['data'] != null)) {
+        if (data is Map<String, dynamic> &&
+            (res['success'] == true || res['data'] != null)) {
           _service = ServiceModel.fromJson(data);
         }
       });
@@ -1373,23 +1374,42 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const Divider(height: 30),
-                  _infoRowText('Jenis layanan', customer?.serviceName ?? '-'),
+
+                  _infoRowText(
+                    'Jenis layanan',
+                    _serviceLoading
+                        ? 'Memuat...'
+                        : (_service?.name ?? customer?.serviceName ?? '-'),
+                  ),
+
                   if (_serviceLoading) ...[
                     const SizedBox(height: 12),
-                    const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
+                    const Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
                   ] else if (_service != null) ...[
                     const SizedBox(height: 12),
-                    _infoRowText('Min. Pemakaian', '${_service!.minUsage.toStringAsFixed(0)} m³'),
+                    _infoRowText(
+                      'Min. Pemakaian',
+                      '${_service!.minUsage.toStringAsFixed(0)} m³',
+                    ),
                     const SizedBox(height: 12),
-                    _infoRowText('Max. Pemakaian', '${_service!.maxUsage.toStringAsFixed(0)} m³'),
+                    _infoRowText(
+                      'Max. Pemakaian',
+                      '${_service!.maxUsage.toStringAsFixed(0)} m³',
+                    ),
                     const SizedBox(height: 12),
-                    _infoRowText('Tarif', _service!.priceFormatted + '/m³'),
+                    _infoRowText('Tarif', '${_service!.priceFormatted}/m³'),
                   ],
                 ],
               ),
             ),
             const SizedBox(height: 30),
-            
+
             if (customer != null)
               SizedBox(
                 width: double.infinity,
@@ -1398,7 +1418,8 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                     final changed = await Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => EditCustomerProfileView(customer: customer!),
+                        builder: (_) =>
+                            EditCustomerProfileView(customer: customer!),
                       ),
                     );
                     if (changed == true) {
@@ -1406,13 +1427,17 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                     }
                   },
                   icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: const Text('Edit Profil',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  label: const Text(
+                    'Edit Profil',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                   ),
                 ),
               ),
@@ -1436,7 +1461,9 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.danger,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                 ),
                 child: const Text(
                   'Keluar',

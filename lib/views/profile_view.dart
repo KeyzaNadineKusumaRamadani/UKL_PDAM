@@ -253,30 +253,13 @@ class _ProfileViewState extends State<ProfileView> {
                       ),
                       const SizedBox(height: 10),
 
-                      // Refresh
-                      SizedBox(
-                        width: double.infinity,
-                        height: 44,
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.refresh, size: 16, color: AppColors.accent),
-                          label: const Text('Refresh Profil',
-                              style: TextStyle(color: AppColors.accent)),
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: AppColors.accent),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          onPressed: _loadProfile,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-
                       // Logout
                       SizedBox(
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton.icon(
                           icon: const Icon(Icons.logout, size: 18),
-                          label: const Text('🚪 Keluar & Hapus Sesi',
+                          label: const Text('Keluar & Hapus Sesi',
                               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.danger,
