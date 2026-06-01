@@ -134,7 +134,7 @@ class _AddServiceViewState extends State<AddServiceView> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      flex: 2,
+
                       child: CustomButton(
                         text: 'Simpan',
                         isLoading: _isLoading,

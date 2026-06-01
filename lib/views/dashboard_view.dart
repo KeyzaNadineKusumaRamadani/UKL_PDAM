@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 
 
 class DashboardView extends StatefulWidget {
-  const DashboardView({super.key});
+  final void Function(int tabIndex)? onNavigate;
+  const DashboardView({super.key, this.onNavigate});
 
   @override
   State<DashboardView> createState() => _DashboardViewState();
@@ -291,6 +292,7 @@ class _DashboardViewState extends State<DashboardView> {
                                   : isVerified
                                       ? AppColors.success
                                       : AppColors.danger,
+                              onTap: () => widget.onNavigate?.call(3),
                             );
                           }),
 
@@ -306,6 +308,7 @@ class _DashboardViewState extends State<DashboardView> {
                               icon: Icons.person_add_outlined,
                               iconBg: AppColors.primaryLight,
                               iconColor: AppColors.primary,
+                              onTap: () => widget.onNavigate?.call(2),
                             );
                           }),
                         ],
@@ -403,6 +406,7 @@ class _ActivityTile extends StatelessWidget {
   final IconData icon;
   final Color iconBg;
   final Color iconColor;
+  final VoidCallback? onTap;
 
   const _ActivityTile({
     required this.title,
@@ -414,11 +418,14 @@ class _ActivityTile extends StatelessWidget {
     required this.icon,
     required this.iconBg,
     required this.iconColor,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -486,11 +493,13 @@ class _ActivityTile extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Icon(Icons.chevron_right,
-                  color: AppColors.textMuted, size: 18),
+                  color: onTap != null ? AppColors.primary : AppColors.textMuted,
+                  size: 18),
             ],
           ),
         ],
       ),
+    ),
     );
   }
 }

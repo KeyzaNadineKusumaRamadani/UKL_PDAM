@@ -2,8 +2,6 @@ import 'package:alirin/controllers/auth_controllers.dart';
 import 'package:alirin/models/model_service.dart';
 import 'package:alirin/service/api_service.dart';
 
-
-
 class ServiceController {
   List<ServiceModel> services = [];
   bool isLoading = false;

@@ -1,3 +1,5 @@
+import 'package:alirin/models/bill_models.dart';
+
 class PaymentModel {
   final int id;
   final int billId;
@@ -8,6 +10,7 @@ class PaymentModel {
   final String? createdAt;
   final int month;
   final int year;
+  final BillModel? bill;
 
   PaymentModel({
     required this.id,
@@ -19,58 +22,70 @@ class PaymentModel {
     this.createdAt,
     required this.month,
     required this.year,
+    this.bill,
   });
 
   factory PaymentModel.fromJson(Map<String, dynamic> json) {
-    // API bisa return data dalam berbagai format nested
-    // Coba ambil dari root atau dari nested 'bill' / 'customer'
-    final bill = json['bill'] as Map<String, dynamic>?;
-    final customer = bill?['customer'] as Map<String, dynamic>?;
+    final billJson = json['bill'] as Map<String, dynamic>?;
+    final customer = billJson?['customer'] as Map<String, dynamic>?;
 
-    // Nama customer: coba dari berbagai field
+    // Nama customer dari bill.customer.name
     String name = '';
-    if (json['customer_name'] != null && json['customer_name'].toString().isNotEmpty) {
-      name = json['customer_name'].toString();
-    } else if (customer?['name'] != null) {
+    if (customer?['name'] != null) {
       name = customer!['name'].toString();
-    } else if (json['name'] != null) {
-      name = json['name'].toString();
-    } else if (bill?['customer_name'] != null) {
-      name = bill!['customer_name'].toString();
+    } else if (json['customer_name'] != null) {
+      name = json['customer_name'].toString();
     }
 
-    // Total: coba dari root atau nested bill
+    // Total dari total_amount
     double total = 0;
-    if (json['total'] != null) {
+    if (json['total_amount'] != null) {
+      total = double.tryParse(json['total_amount'].toString()) ?? 0;
+    } else if (json['total'] != null) {
       total = double.tryParse(json['total'].toString()) ?? 0;
-    } else if (bill?['total'] != null) {
-      total = double.tryParse(bill!['total'].toString()) ?? 0;
+    } else if (billJson?['amount'] != null) {
+      total = double.tryParse(billJson!['amount'].toString()) ?? 0;
     }
 
-    // Month & Year dari nested bill atau root
-    int month = 0;
-    int year = 0;
-    if (json['month'] != null) {
-      month = int.tryParse(json['month'].toString()) ?? 0;
-    } else if (bill?['month'] != null) {
-      month = int.tryParse(bill!['month'].toString()) ?? 0;
+    // Month & Year dari bill
+    int month = billJson?['month'] ?? json['month'] ?? 0;
+    int year = billJson?['year'] ?? json['year'] ?? 0;
+
+    // Status dari verified boolean
+    String status = 'pending';
+    if (json['verified'] == true) {
+      status = 'lunas';
     }
-    if (json['year'] != null) {
-      year = int.tryParse(json['year'].toString()) ?? 0;
-    } else if (bill?['year'] != null) {
-      year = int.tryParse(bill!['year'].toString()) ?? 0;
+
+    // Proof image dari payment_proof
+    String? proofImage = json['payment_proof'] ??
+        json['proof_image'] ??
+        json['file'];
+
+    // Created at
+    String? createdAt = json['createdAt'] ??
+        json['created_at'] ??
+        json['payment_date'];
+
+    // Parse nested bill
+    BillModel? billModel;
+    if (billJson != null) {
+      try {
+        billModel = BillModel.fromJson(billJson);
+      } catch (_) {}
     }
 
     return PaymentModel(
       id: json['id'] ?? 0,
-      billId: json['bill_id'] ?? bill?['id'] ?? 0,
+      billId: json['bill_id'] ?? billJson?['id'] ?? 0,
       customerName: name,
       total: total,
-      status: json['status']?.toString() ?? 'pending',
-      proofImage: json['proof_image'] ?? json['file'] ?? json['image'],
-      createdAt: json['created_at'],
+      status: status,
+      proofImage: proofImage,
+      createdAt: createdAt,
       month: month,
       year: year,
+      bill: billModel,
     );
   }
 
@@ -89,7 +104,8 @@ class PaymentModel {
     return '-';
   }
 
-  bool get isPending => status == 'pending' || status == 'menunggu';
-  bool get isVerified => status == 'lunas' || status == 'verified' || status == 'verif';
-  bool get isRejected => status == 'ditolak' || status == 'rejected';
+  bool get isPending => status == 'pending';
+  bool get isVerified => status == 'lunas';
+  bool get isRejected => status == 'ditolak';
+  bool get isPaid => isVerified;
 }

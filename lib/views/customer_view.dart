@@ -3,9 +3,7 @@ import 'package:alirin/models/customer_models.dart';
 import 'package:alirin/service/app_collors.dart';
 import 'package:alirin/views/app_deader.dart';
 import 'package:flutter/material.dart';
-
 import '../widgets/customer_tile.dart';
-
 import 'add_customer_view.dart';
 import 'edit_customer_view.dart';
 

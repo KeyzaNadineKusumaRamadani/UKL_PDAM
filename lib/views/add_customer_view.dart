@@ -225,7 +225,7 @@ class _AddCustomerViewState extends State<AddCustomerView> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      flex: 2,
+
                       child: CustomButton(
                         text: 'Simpan',
                         isLoading: _isLoading,

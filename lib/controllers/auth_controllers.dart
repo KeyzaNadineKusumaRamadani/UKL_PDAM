@@ -1,25 +1,26 @@
 import 'dart:developer';
 import 'package:alirin/models/admin_models.dart';
-import 'package:alirin/service/api_service.dart';
-
-
+import 'package:alirin/service/api_service.dart'; 
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthController {
   String _token = '';
+  String _role = '';
   AdminModel? _adminData;
 
   String get token => _token;
+  String get role => _role;
   AdminModel? get adminData => _adminData;
 
   Future<Map<String, dynamic>> login(String username, String password) async {
     if (username.isEmpty || password.isEmpty) {
-      return {'success': false, 'message': 'Username dan password wajib diisi'};
+      return {'success': false, 'message': 'Username dan password wajib diisi', 'role': ''};
     }
     if (username.length < 4) {
-      return {'success': false, 'message': 'Username minimal 4 karakter'};
+      return {'success': false, 'message': 'Username minimal 4 karakter', 'role': ''};
     }
     if (password.length < 4) {
-      return {'success': false, 'message': 'Password minimal 4 karakter'};
+      return {'success': false, 'message': 'Password minimal 4 karakter', 'role': ''};
     }
 
     final result = await ApiService.login(username, password);
@@ -28,61 +29,52 @@ class AuthController {
     if (result['token'] != null) {
       _token = result['token'];
 
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('token', _token);
+
       final data = result['data'];
-      if (data != null && data['role'] != null &&
-          data['role'].toString().toUpperCase() != 'ADMIN') {
-        _token = '';
-        return {'success': false, 'message': 'Akun ini bukan admin PDAM'};
+      final rawRole = (result['role'] ?? data?['role'] ?? '').toString().toUpperCase();
+      log('RAW ROLE: $rawRole');
+
+      if (rawRole == 'ADMIN') {
+        _role = 'admin';
+
+        if (data != null) {
+          _adminData = AdminModel.fromJson(data);
+        }
+
+        await loadAdminProfile();
+
+        if (_adminData == null) {
+          _adminData = AdminModel(
+            id: 0,
+            username: username,
+            name: username,
+            phone: '',
+            role: 'ADMIN',
+          );
+        }
+        if (_adminData!.name.isEmpty) {
+          _adminData = AdminModel(
+            id: _adminData!.id,
+            username: _adminData!.username,
+            name: _adminData!.username.isNotEmpty ? _adminData!.username : username,
+            phone: _adminData!.phone,
+            role: _adminData!.role,
+          );
+        }
+
+        return {'success': true, 'message': 'Login berhasil', 'role': 'admin'};
+      } else {
+        _role = 'customer';
+        return {'success': true, 'message': 'Login berhasil', 'role': 'customer'};
       }
-
-      if (data != null) {
-        _adminData = AdminModel.fromJson(data);
-      }
-
-      // Fetch profil lengkap
-      await loadAdminProfile();
-
-      // Fallback jika profil tidak berhasil diload
-      if (_adminData == null) {
-        _adminData = AdminModel(
-          id: 0,
-          username: username,
-          name: username,
-          phone: '',
-          role: 'ADMIN',
-        );
-      }
-
-      // FIX: Fallback jika name kosong, pakai username agar tidak tampil "Unknown Admin"
-      if (_adminData!.name.isEmpty) {
-        _adminData = AdminModel(
-          id: _adminData!.id,
-          username: _adminData!.username,
-          name: _adminData!.username.isNotEmpty ? _adminData!.username : username,
-          phone: _adminData!.phone,
-          role: _adminData!.role,
-        );
-      }
-
-      return {'success': true, 'message': 'Login berhasil'};
-    }
-
-    // Dummy login fallback
-    if (username == 'admin' && password == 'admin') {
-      _token = 'dummy_token_admin';
-      _adminData = AdminModel(
-        id: 0,
-        username: 'admin',
-        name: 'Admin PDAM',
-        phone: '081234567890',
-        role: 'ADMIN',
-      );
-      return {'success': true, 'message': 'Login berhasil'};
     }
 
     return {
       'success': false,
-      'message': result['message'] ?? 'Username atau password salah'
+      'message': result['message'] ?? 'Username atau password salah',
+      'role': ''
     };
   }
 
@@ -95,10 +87,8 @@ class AuthController {
       Map<String, dynamic>? adminJson;
 
       if (result['data'] != null) {
-        // Format: { data: { id, username, ... } }
         adminJson = result['data'] as Map<String, dynamic>;
       } else if (result['id'] != null) {
-        // Format langsung: { id, username, ... }
         adminJson = result;
       }
 
@@ -106,7 +96,6 @@ class AuthController {
         _adminData = AdminModel.fromJson(adminJson);
         log('ADMIN PARSED: id=${_adminData?.id} username=${_adminData?.username} name=${_adminData?.name}');
 
-        // FIX: Jika name kosong setelah parse, fallback ke username agar tidak "Unknown Admin"
         if (_adminData != null && (_adminData!.name.isEmpty)) {
           _adminData = AdminModel(
             id: _adminData!.id,
@@ -122,10 +111,8 @@ class AuthController {
     }
   }
 
-  // Update profil via API
   Future<Map<String, dynamic>> updateProfile(
       int adminId, Map<String, dynamic> data) async {
-    // Coba fetch ulang ID jika masih 0
     if (adminId == 0) {
       await loadAdminProfile();
       adminId = _adminData?.id ?? 0;
@@ -147,7 +134,9 @@ class AuthController {
 
   void logout() {
     _token = '';
+    _role = '';
     _adminData = null;
+    SharedPreferences.getInstance().then((p) => p.clear());
   }
 }
 

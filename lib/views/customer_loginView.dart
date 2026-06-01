@@ -1,6 +1,8 @@
+import 'package:alirin/service/api_service.dart';
 import 'package:flutter/material.dart';
-import 'dashboard_view.dart';
+import 'customer_dashboard_view.dart';
 import 'login_view.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CustomerLoginView extends StatefulWidget {
   const CustomerLoginView({super.key});
@@ -19,30 +21,34 @@ class _CustomerLoginViewState
   bool obscure = true;
   bool loading = false;
 
-  void loginCustomer() async {
-
+    void loginCustomer() async {
+    if (email.text.isEmpty || password.text.isEmpty) return;
     setState(() {
       loading = true;
     });
 
-    await Future.delayed(
-      const Duration(seconds: 1),
-    );
+    final result = await ApiService.login(email.text.trim(), password.text.trim());
 
     if (!mounted) return;
-
     setState(() {
       loading = false;
     });
 
-    Navigator.pushReplacement(
-
-      context,
-
-      MaterialPageRoute(
-        builder: (_) => const DashboardView(),
-      ),
-    );
+    if (result['token'] != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('token', result['token']);
+      
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const CustomerDashboardView(),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'] ?? 'Login failed')),
+      );
+    }
   }
 
   @override
@@ -232,9 +238,24 @@ class _CustomerLoginViewState
                   borderRadius:
                       BorderRadius.circular(24),
 
+                  child: GestureDetector(
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          const LoginView(
+                      ),
+                    ),
+                  );
+                },
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
                   child: Image.asset(
-                    'assets/Frame 652.png',
+                    'assets/images/Frame 652.png',
                   ),
+                ),
+              ),
                 ),
               ),
 

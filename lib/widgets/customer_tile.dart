@@ -36,22 +36,7 @@ class CustomerTile extends StatelessWidget {
 
   Color get _avatarColor => _avatarColors[customer.name.length % _avatarColors.length];
 
-  // Tentukan status berdasarkan data (bisa dikembangkan)
-  String get _statusLabel => customer.serviceName?.isNotEmpty == true ? 'Lunas' : 'Belum Bayar';
-  Color get _statusColor {
-    final s = _statusLabel;
-    if (s == 'Lunas') return AppColors.success;
-    if (s == 'Terlambat') return AppColors.danger;
-    if (s == 'Baru') return AppColors.primary;
-    return AppColors.danger;
-  }
-  Color get _statusBg {
-    final s = _statusLabel;
-    if (s == 'Lunas') return AppColors.successLight;
-    if (s == 'Terlambat') return AppColors.dangerLight;
-    if (s == 'Baru') return AppColors.primaryLight;
-    return AppColors.dangerLight;
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -111,22 +96,7 @@ class CustomerTile extends StatelessWidget {
                     fontSize: 11,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: _statusBg,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    _statusLabel,
-                    style: TextStyle(
-                      color: _statusColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
+
               ],
             ),
           ),

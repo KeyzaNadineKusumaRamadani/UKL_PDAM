@@ -28,18 +28,48 @@ class BillModel {
   });
 
   factory BillModel.fromJson(Map<String, dynamic> json) {
-    // customer_name bisa ada di root, atau nested di 'customer'
     final nested = json['customer'] as Map<String, dynamic>?;
+    final serviceJson = json['service'] as Map<String, dynamic>?;
+    final paymentsJson = json['payments'] as Map<String, dynamic>?;
+
+    // Nama customer
     String customerName = '';
     if (json['customer_name'] != null &&
         json['customer_name'].toString().isNotEmpty) {
       customerName = json['customer_name'].toString();
     } else if (nested?['name'] != null) {
       customerName = nested!['name'].toString();
-    } else if (json['name'] != null) {
-      customerName = json['name'].toString();
     }
-    // Jika masih kosong, biarkan kosong — controller akan inject dari customerController
+
+    // Status — hanya dari verified_payment dan payments.verified
+    String status = 'belum_bayar';
+    final bool verifiedPayment = json['verified_payment'] == true;
+    final bool hasPayment = paymentsJson != null;
+    final bool paymentVerified = paymentsJson?['verified'] == true;
+
+    if (verifiedPayment || paymentVerified) {
+      status = 'lunas';
+    } else if (hasPayment && !paymentVerified) {
+      status = 'menunggu';
+    } else {
+      status = 'belum_bayar';
+    }
+
+    // Total dari amount
+    double total = 0;
+    if (json['amount'] != null) {
+      total = double.tryParse(json['amount'].toString()) ?? 0;
+    } else if (json['total'] != null) {
+      total = double.tryParse(json['total'].toString()) ?? 0;
+    }
+
+    // Price dari nested service
+    double? price;
+    if (json['price'] != null) {
+      price = double.tryParse(json['price'].toString());
+    } else if (serviceJson?['price'] != null) {
+      price = double.tryParse(serviceJson!['price'].toString());
+    }
 
     return BillModel(
       id: json['id'] ?? 0,
@@ -52,15 +82,14 @@ class BillModel {
       measurementNumber: json['measurement_number']?.toString() ?? '',
       usageValue:
           double.tryParse(json['usage_value']?.toString() ?? '0') ?? 0,
-      total: double.tryParse(json['total']?.toString() ?? '0') ?? 0,
-      status: json['status']?.toString() ?? 'belum_bayar',
-      serviceName: json['service_name']?.toString() ?? '',
-      price: double.tryParse(json['price']?.toString() ?? '0') ?? 0,
+      total: total,
+      status: status,
+      serviceName: serviceJson?['name']?.toString() ??
+          json['service_name']?.toString() ?? '',
+      price: price,
     );
   }
 
-  // FIX: Jika total dari API = 0 tapi price & usageValue ada,
-  // hitung sendiri: usageValue × price
   double get effectiveTotal {
     if (total > 0) return total;
     final p = price ?? 0;
@@ -77,7 +106,6 @@ class BillModel {
     return month.toString();
   }
 
-  // FIX: pakai effectiveTotal bukan total langsung
   String get totalFormatted {
     final t = effectiveTotal;
     if (t == 0) return 'Rp 0';
@@ -91,15 +119,24 @@ class BillModel {
         return 'Lunas';
       case 'menunggu':
       case 'menunggu_verif':
-        return 'Menunggu';
+        return 'Menunggu Verifikasi';
+      case 'ditolak':
+        return 'Ditolak';
       default:
         return 'Belum Bayar';
     }
   }
 
-  // Nama yang ditampilkan — fallback ke ID kalau masih kosong
   String get displayName {
     if (customerName.isNotEmpty) return customerName;
     return 'Customer #$customerId';
   }
+
+  double get totalBill => effectiveTotal;
+  bool get isPaid => status == 'lunas';
+  bool get isUnpaid => status == 'belum_bayar';
+  bool get isRejected => status == 'ditolak';
+  bool get isPending => status == 'menunggu' || status == 'menunggu_verif';
+  String get dueDate => '10 $monthName $year';
+  bool get isOverdue => false;
 }

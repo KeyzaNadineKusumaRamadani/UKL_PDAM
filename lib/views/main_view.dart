@@ -17,10 +17,18 @@ class _MainViewState extends State<MainView> {
   int _selectedIndex = 0;
   final Map<int, Widget> _pageCache = {};
 
+  void _switchTab(int index) {
+    setState(() {
+      _selectedIndex = index;
+      // Invalidate cache so tab rebuilds fresh when navigated from dashboard
+      _pageCache.remove(index);
+    });
+  }
+
   Widget _buildPage(int index) {
     if (!_pageCache.containsKey(index)) {
       switch (index) {
-        case 0: _pageCache[index] = const DashboardView(); break;
+        case 0: _pageCache[index] = DashboardView(onNavigate: _switchTab); break;
         case 1: _pageCache[index] = const ServiceView(); break;
         case 2: _pageCache[index] = const CustomerView(); break;
         case 3: _pageCache[index] = const BillView(); break;

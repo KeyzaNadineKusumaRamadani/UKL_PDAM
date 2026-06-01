@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:alirin/views/login_view.dart';
 import 'package:flutter/material.dart';
 import 'role_view.dart'; // Pastikan import ini mengarah ke file RoleView Anda
 
@@ -298,7 +299,7 @@ class _SplashViewState extends State<SplashView> with TickerProviderStateMixin {
         // Navigasi mutlak menggunakan bawaan Flutter (Menjamin tidak macet akibat problem GetX)
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => const RoleView()),
+          MaterialPageRoute(builder: (context) => const LoginView()),
           (route) => false, // Menghapus halaman splash screen dari memori HP
         );
       },

@@ -8,7 +8,6 @@ import 'package:alirin/service/app_collors.dart';
 import 'package:alirin/views/app_deader.dart';
 import 'package:flutter/material.dart';
 import '../widgets/bill_tile.dart';
-
 import '../widgets/custom_textfield.dart';
 import '../widgets/custom_button.dart';
 
@@ -49,38 +48,10 @@ class _BillViewState extends State<BillView>
   void _showDeleteBillDialog(BillModel b) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.bgCard,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Hapus Tagihan?',
-            style: TextStyle(color: AppColors.textPrimary)),
-        content: Text(
-          'Hapus tagihan ${b.customerName} bulan ${b.monthName} ${b.year}?',
-          style: const TextStyle(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal',
-                style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.danger),
-            onPressed: () async {
-              Navigator.pop(context);
-              await billController.removeBill(b.id);
-              _load();
-            },
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
+      builder: (_) => _DeleteBillDialog(bill: b, onDeleted: _load),
     );
   }
 
-  // FIX: tambah _showEditBillSheet
   void _showEditBillSheet(BillModel b) async {
     await showModalBottomSheet(
       context: context,
@@ -119,7 +90,7 @@ class _BillViewState extends State<BillView>
   @override
   Widget build(BuildContext context) {
     final pendingCount = billController.payments
-        .where((p) => p.status == 'pending' || p.status == 'menunggu')
+        .where((p) => p.isPending)
         .length;
 
     return Scaffold(
@@ -154,14 +125,14 @@ class _BillViewState extends State<BillView>
                       await _showCreateBillSheet();
                       _load();
                     },
-                    child: const Text('Buat', style: TextStyle(fontWeight: FontWeight.w600)),
+                    child: const Text('Buat',
+                        style: TextStyle(fontWeight: FontWeight.w600)),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 14),
 
-            // Tab bar
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 20),
               decoration: BoxDecoration(
@@ -177,8 +148,8 @@ class _BillViewState extends State<BillView>
                 ),
                 labelColor: Colors.white,
                 unselectedLabelColor: AppColors.textMuted,
-                labelStyle:
-                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                labelStyle: const TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 13),
                 tabs: [
                   const Tab(text: 'Daftar Tagihan'),
                   Tab(
@@ -220,7 +191,6 @@ class _BillViewState extends State<BillView>
                   : TabBarView(
                       controller: _tabCtrl,
                       children: [
-                        // ── Tab 1: Daftar Tagihan ──
                         billController.bills.isEmpty
                             ? const _EmptyState(
                                 icon: Icons.receipt_long_outlined,
@@ -234,7 +204,6 @@ class _BillViewState extends State<BillView>
                                   itemCount: billController.bills.length,
                                   itemBuilder: (_, i) => BillTile(
                                     bill: billController.bills[i],
-                                    // FIX: sambungkan onEdit
                                     onEdit: () => _showEditBillSheet(
                                         billController.bills[i]),
                                     onDelete: () => _showDeleteBillDialog(
@@ -243,7 +212,6 @@ class _BillViewState extends State<BillView>
                                 ),
                               ),
 
-                        // ── Tab 2: Verifikasi Bayar ──
                         billController.payments.isEmpty
                             ? const _EmptyState(
                                 icon: Icons.payment_outlined,
@@ -254,19 +222,15 @@ class _BillViewState extends State<BillView>
                                 child: ListView.builder(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 20),
-                                  itemCount:
-                                      billController.payments.length,
+                                  itemCount: billController.payments.length,
                                   itemBuilder: (_, i) {
                                     final p = billController.payments[i];
-                                    final isPending =
-                                        p.status == 'pending' ||
-                                            p.status == 'menunggu';
                                     return _PaymentCard(
                                       payment: p,
-                                      onVerify: isPending
+                                      onVerify: p.isPending
                                           ? () => _showVerifyDialog(p)
                                           : null,
-                                      onReject: isPending
+                                      onReject: p.isPending
                                           ? () => _showRejectDialog(p)
                                           : null,
                                     );
@@ -295,7 +259,7 @@ class _BillViewState extends State<BillView>
   }
 }
 
-// ── Dialog Verifikasi / Tolak dengan loading ──
+// ── Dialog Verifikasi / Tolak ──
 class _VerifyDialog extends StatefulWidget {
   final PaymentModel payment;
   final VoidCallback onDone;
@@ -331,7 +295,9 @@ class _VerifyDialogState extends State<_VerifyDialog> {
         msg.toLowerCase().contains('verif') ||
         msg.toLowerCase().contains('berhasil') ||
         msg.toLowerCase().contains('payment') ||
-        (result['error'] == null && result['message'] == null && result['success'] == null);
+        (result['error'] == null &&
+            result['message'] == null &&
+            result['success'] == null);
 
     Navigator.pop(context);
 
@@ -344,17 +310,14 @@ class _VerifyDialogState extends State<_VerifyDialog> {
                   : '✅ Pembayaran ${widget.payment.customerName} berhasil ditolak'
               : '❌ ${msg.isNotEmpty ? msg : 'Gagal memproses pembayaran'}',
         ),
-        backgroundColor:
-            berhasil ? AppColors.success : AppColors.danger,
+        backgroundColor: berhasil ? AppColors.success : AppColors.danger,
         behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10)),
       ),
     );
 
-    if (berhasil) {
-      widget.onDone();
-    }
+    if (berhasil) widget.onDone();
   }
 
   @override
@@ -367,8 +330,8 @@ class _VerifyDialogState extends State<_VerifyDialog> {
         widget.isVerify
             ? '✅ Verifikasi Pembayaran?'
             : '❌ Tolak Pembayaran?',
-        style:
-            const TextStyle(color: AppColors.textPrimary, fontSize: 16),
+        style: const TextStyle(
+            color: AppColors.textPrimary, fontSize: 16),
       ),
       content: _loading
           ? const Column(
@@ -378,7 +341,8 @@ class _VerifyDialogState extends State<_VerifyDialog> {
                 CircularProgressIndicator(color: AppColors.primary),
                 SizedBox(height: 14),
                 Text('Memproses...',
-                    style: TextStyle(color: AppColors.textSecondary)),
+                    style:
+                        TextStyle(color: AppColors.textSecondary)),
               ],
             )
           : RichText(
@@ -420,7 +384,8 @@ class _VerifyDialogState extends State<_VerifyDialog> {
                       borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: _action,
-                child: Text(widget.isVerify ? 'Verifikasi' : 'Tolak'),
+                child:
+                    Text(widget.isVerify ? 'Verifikasi' : 'Tolak'),
               ),
             ],
     );
@@ -531,8 +496,7 @@ class _PaymentCard extends StatelessWidget {
                         padding:
                             const EdgeInsets.symmetric(vertical: 9),
                         decoration: BoxDecoration(
-                          color:
-                              AppColors.success.withOpacity(0.12),
+                          color: AppColors.success.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Center(
@@ -619,6 +583,28 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
       return;
     }
 
+    // Validasi usage_value sesuai range layanan
+    final usage = double.tryParse(_usageCtrl.text.trim()) ?? 0;
+    final services = serviceController.services
+        .where((s) => s.id == _selectedCustomer!.serviceId)
+        .toList();
+
+    if (services.isNotEmpty) {
+      final service = services.first;
+      if (usage < service.minUsage || usage > service.maxUsage) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '❌ Pemakaian harus antara ${service.minUsage.toInt()} - ${service.maxUsage.toInt()} m³ untuk layanan ${service.name}',
+            ),
+            backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() => _isLoading = true);
 
     final data = {
@@ -626,10 +612,16 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
       'month': _selectedMonth,
       'year': _selectedYear,
       'measurement_number': _meterCtrl.text.trim(),
-      'usage_value': double.tryParse(_usageCtrl.text.trim()) ?? 0,
+      'usage_value': usage,
     };
 
+    print('=== ADD BILL ===');
+    print('data: $data');
+
     final result = await billController.addBill(data);
+
+    print('result: $result');
+
     setState(() => _isLoading = false);
 
     if (!mounted) return;
@@ -638,7 +630,9 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
     final berhasil = result['data'] != null ||
         result['success'] == true ||
         msg.toLowerCase().contains('created') ||
-        msg.toLowerCase().contains('berhasil');
+        msg.toLowerCase().contains('berhasil') ||
+        msg.toLowerCase().contains('bill') ||
+        msg.toLowerCase().contains('tagihan');
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -726,16 +720,54 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
                     items: customers.map((c) {
                       return DropdownMenuItem<CustomerModel>(
                         value: c,
-                        child: Text('${c.name} (${c.username})',
+                        child: Text(
+                          '${c.name} (${c.username})',
                           style: const TextStyle(
-                              color: AppColors.textPrimary, fontSize: 14),
-                          overflow: TextOverflow.ellipsis),
+                              color: AppColors.textPrimary,
+                              fontSize: 14),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       );
                     }).toList(),
-                    onChanged: (v) => setState(() => _selectedCustomer = v),
+                    onChanged: (v) =>
+                        setState(() => _selectedCustomer = v),
                   ),
                 ),
               ),
+
+              // Info range layanan customer
+              if (_selectedCustomer != null) ...[
+                const SizedBox(height: 6),
+                Builder(builder: (_) {
+                  final services = serviceController.services
+                      .where((s) => s.id == _selectedCustomer!.serviceId)
+                      .toList();
+                  if (services.isEmpty) return const SizedBox();
+                  final s = services.first;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline,
+                            color: AppColors.primary, size: 14),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${s.name}: ${s.minUsage.toInt()} - ${s.maxUsage.toInt()} m³  •  Rp ${s.price.toInt()}/m³',
+                          style: const TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+
               const SizedBox(height: 12),
 
               Row(
@@ -751,11 +783,13 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
                                 fontWeight: FontWeight.w500)),
                         const SizedBox(height: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12),
                           decoration: BoxDecoration(
                             color: AppColors.bgCard2,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.border),
+                            border:
+                                Border.all(color: AppColors.border),
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<int>(
@@ -771,8 +805,8 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
                                           fontSize: 13)),
                                 );
                               }),
-                              onChanged: (v) =>
-                                  setState(() => _selectedMonth = v ?? 1),
+                              onChanged: (v) => setState(
+                                  () => _selectedMonth = v ?? 1),
                             ),
                           ),
                         ),
@@ -791,11 +825,13 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
                                 fontWeight: FontWeight.w500)),
                         const SizedBox(height: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12),
                           decoration: BoxDecoration(
                             color: AppColors.bgCard2,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.border),
+                            border:
+                                Border.all(color: AppColors.border),
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<int>(
@@ -807,12 +843,13 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
                                         value: y,
                                         child: Text('$y',
                                             style: const TextStyle(
-                                                color: AppColors.textPrimary,
+                                                color: AppColors
+                                                    .textPrimary,
                                                 fontSize: 13)),
                                       ))
                                   .toList(),
-                              onChanged: (v) =>
-                                  setState(() => _selectedYear = v ?? 2026),
+                              onChanged: (v) => setState(
+                                  () => _selectedYear = v ?? 2026),
                             ),
                           ),
                         ),
@@ -829,18 +866,30 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
                 controller: _meterCtrl,
                 keyboardType: TextInputType.number,
                 validator: (v) => v == null || v.isEmpty
-                    ? 'No. Meteran wajib diisi' : null,
+                    ? 'No. Meteran wajib diisi'
+                    : null,
               ),
               const SizedBox(height: 12),
 
               CustomTextField(
                 label: 'Pemakaian (m³)',
-                hint: '45',
+                hint: _selectedCustomer != null
+                    ? () {
+                        final services = serviceController.services
+                            .where((s) =>
+                                s.id == _selectedCustomer!.serviceId)
+                            .toList();
+                        if (services.isEmpty) return '45';
+                        final s = services.first;
+                        return '${s.minUsage.toInt()} - ${s.maxUsage.toInt()}';
+                      }()
+                    : '45',
                 controller: _usageCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true),
                 validator: (v) => v == null || v.isEmpty
-                    ? 'Pemakaian wajib diisi' : null,
+                    ? 'Pemakaian wajib diisi'
+                    : null,
               ),
               const SizedBox(height: 12),
 
@@ -850,24 +899,30 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
                   decoration: BoxDecoration(
                     color: AppColors.bgCard2,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                    border: Border.all(
+                        color:
+                            AppColors.primary.withOpacity(0.3)),
                   ),
                   child: Column(
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
                         children: [
                           const Text('Customer',
                               style: TextStyle(
-                                  color: AppColors.textMuted, fontSize: 12)),
+                                  color: AppColors.textMuted,
+                                  fontSize: 12)),
                           Text(_selectedCustomer?.name ?? '-',
                               style: const TextStyle(
-                                  color: AppColors.textSecondary, fontSize: 12)),
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12)),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
                         children: [
                           const Text('Total Tagihan',
                               style: TextStyle(
@@ -904,7 +959,7 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
   }
 }
 
-// ── FIX: Form Edit Tagihan ──
+// ── Form Edit Tagihan ──
 class _EditBillSheet extends StatefulWidget {
   final BillModel bill;
   const _EditBillSheet({required this.bill});
@@ -929,13 +984,12 @@ class _EditBillSheetState extends State<_EditBillSheet> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill dengan data tagihan yang ada
-    _meterCtrl = TextEditingController(text: widget.bill.measurementNumber);
+    _meterCtrl =
+        TextEditingController(text: widget.bill.measurementNumber);
     _usageCtrl = TextEditingController(
         text: widget.bill.usageValue.toStringAsFixed(0));
     _selectedMonth = widget.bill.month.clamp(1, 12);
     _selectedYear = widget.bill.year;
-    // Pastikan tahun ada di list
     if (![2024, 2025, 2026, 2027].contains(_selectedYear)) {
       _selectedYear = 2026;
     }
@@ -975,7 +1029,8 @@ class _EditBillSheetState extends State<_EditBillSheet> {
               ? '✅ Tagihan berhasil diupdate!'
               : '❌ ${msg.isNotEmpty ? msg : 'Gagal mengupdate tagihan'}',
         ),
-        backgroundColor: berhasil ? AppColors.success : AppColors.danger,
+        backgroundColor:
+            berhasil ? AppColors.success : AppColors.danger,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -997,7 +1052,6 @@ class _EditBillSheetState extends State<_EditBillSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Handle bar
               Center(
                 child: Container(
                   width: 40, height: 4,
@@ -1008,8 +1062,6 @@ class _EditBillSheetState extends State<_EditBillSheet> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Header
               Row(
                 children: [
                   const Expanded(
@@ -1019,7 +1071,6 @@ class _EditBillSheetState extends State<_EditBillSheet> {
                             fontSize: 18,
                             fontWeight: FontWeight.bold)),
                   ),
-                  // Info nama customer (readonly)
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 5),
@@ -1039,7 +1090,6 @@ class _EditBillSheetState extends State<_EditBillSheet> {
               ),
               const SizedBox(height: 16),
 
-              // Bulan & Tahun
               Row(
                 children: [
                   Expanded(
@@ -1053,11 +1103,13 @@ class _EditBillSheetState extends State<_EditBillSheet> {
                                 fontWeight: FontWeight.w500)),
                         const SizedBox(height: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12),
                           decoration: BoxDecoration(
                             color: AppColors.bgCard2,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.border),
+                            border:
+                                Border.all(color: AppColors.border),
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<int>(
@@ -1073,8 +1125,8 @@ class _EditBillSheetState extends State<_EditBillSheet> {
                                           fontSize: 13)),
                                 );
                               }),
-                              onChanged: (v) =>
-                                  setState(() => _selectedMonth = v ?? 1),
+                              onChanged: (v) => setState(
+                                  () => _selectedMonth = v ?? 1),
                             ),
                           ),
                         ),
@@ -1093,11 +1145,13 @@ class _EditBillSheetState extends State<_EditBillSheet> {
                                 fontWeight: FontWeight.w500)),
                         const SizedBox(height: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12),
                           decoration: BoxDecoration(
                             color: AppColors.bgCard2,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.border),
+                            border:
+                                Border.all(color: AppColors.border),
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<int>(
@@ -1109,12 +1163,13 @@ class _EditBillSheetState extends State<_EditBillSheet> {
                                         value: y,
                                         child: Text('$y',
                                             style: const TextStyle(
-                                                color: AppColors.textPrimary,
+                                                color: AppColors
+                                                    .textPrimary,
                                                 fontSize: 13)),
                                       ))
                                   .toList(),
-                              onChanged: (v) =>
-                                  setState(() => _selectedYear = v ?? 2026),
+                              onChanged: (v) => setState(
+                                  () => _selectedYear = v ?? 2026),
                             ),
                           ),
                         ),
@@ -1131,7 +1186,8 @@ class _EditBillSheetState extends State<_EditBillSheet> {
                 controller: _meterCtrl,
                 keyboardType: TextInputType.number,
                 validator: (v) => v == null || v.isEmpty
-                    ? 'No. Meteran wajib diisi' : null,
+                    ? 'No. Meteran wajib diisi'
+                    : null,
               ),
               const SizedBox(height: 12),
 
@@ -1139,10 +1195,11 @@ class _EditBillSheetState extends State<_EditBillSheet> {
                 label: 'Pemakaian (m³)',
                 hint: '45',
                 controller: _usageCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true),
                 validator: (v) => v == null || v.isEmpty
-                    ? 'Pemakaian wajib diisi' : null,
+                    ? 'Pemakaian wajib diisi'
+                    : null,
               ),
               const SizedBox(height: 20),
 
@@ -1177,6 +1234,119 @@ class _EmptyState extends StatelessWidget {
                   color: AppColors.textMuted, fontSize: 15)),
         ],
       ),
+    );
+  }
+}
+
+class _DeleteBillDialog extends StatefulWidget {
+  final BillModel bill;
+  final VoidCallback onDeleted;
+  const _DeleteBillDialog({required this.bill, required this.onDeleted});
+
+  @override
+  State<_DeleteBillDialog> createState() => _DeleteBillDialogState();
+}
+
+class _DeleteBillDialogState extends State<_DeleteBillDialog> {
+  bool _isDeleting = false;
+
+  Future<void> _hapus() async {
+    setState(() => _isDeleting = true);
+    await billController.removeBill(widget.bill.id);
+    if (!mounted) return;
+    setState(() => _isDeleting = false);
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(
+          '✅ Tagihan ${widget.bill.customerName} bulan ${widget.bill.monthName} berhasil dihapus'),
+      backgroundColor: AppColors.success,
+      behavior: SnackBarBehavior.floating,
+    ));
+    widget.onDeleted();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.bgCard,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+              color: AppColors.dangerLight, shape: BoxShape.circle),
+          child: const Icon(Icons.delete_outline,
+              color: AppColors.danger, size: 20),
+        ),
+        const SizedBox(width: 10),
+        const Expanded(
+          child: Text('Hapus Tagihan?',
+              style:
+                  TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+        ),
+      ]),
+      content: _isDeleting
+          ? const Column(mainAxisSize: MainAxisSize.min, children: [
+              CircularProgressIndicator(color: AppColors.primary),
+              SizedBox(height: 12),
+              Text('Menghapus tagihan...',
+                  style: TextStyle(
+                      color: AppColors.textSecondary, fontSize: 13)),
+            ])
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                RichText(
+                    text: TextSpan(
+                        style: const TextStyle(
+                            color: AppColors.textSecondary, fontSize: 14),
+                        children: [
+                      const TextSpan(text: 'Hapus tagihan '),
+                      TextSpan(
+                          text:
+                              '${widget.bill.customerName} — ${widget.bill.monthName} ${widget.bill.year}',
+                          style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.bold)),
+                      const TextSpan(text: '?'),
+                    ])),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                      color: AppColors.dangerLight,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: AppColors.danger.withOpacity(0.3))),
+                  child: const Text(
+                    '⚠️ Tagihan yang dihapus tidak dapat dikembalikan.',
+                    style: TextStyle(
+                        color: AppColors.danger, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+      actions: _isDeleting
+          ? []
+          : [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Batal',
+                    style:
+                        TextStyle(color: AppColors.textSecondary)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.danger,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    elevation: 0),
+                onPressed: _hapus,
+                child: const Text('Hapus',
+                    style: TextStyle(color: Colors.white)),
+              ),
+            ],
     );
   }
 }

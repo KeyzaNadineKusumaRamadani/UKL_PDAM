@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:http_parser/http_parser.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService {
@@ -197,7 +199,6 @@ class ApiService {
     }
   }
 
-  // FIX: tambah updateBill untuk fitur edit tagihan
   static Future<Map<String, dynamic>> updateBill(
       String token, int id, Map<String, dynamic> data) async {
     try {
@@ -228,8 +229,8 @@ class ApiService {
   static Future<Map<String, dynamic>> getPayments(String token,
       {int page = 1, int quantity = 50}) async {
     try {
-      final uri =
-          Uri.parse('$baseUrl/payments?page=$page&quantity=$quantity&search=');
+      final uri = Uri.parse(
+          '$baseUrl/payments?page=$page&quantity=$quantity&search=');
       final response = await http.get(uri, headers: headers(token));
       return jsonDecode(response.body);
     } catch (e) {
@@ -260,6 +261,219 @@ class ApiService {
       return jsonDecode(response.body);
     } catch (e) {
       return {'success': false, 'message': 'Gagal tolak pembayaran: $e'};
+    }
+  }
+
+  // ===================== CUSTOMER METHODS =====================
+  static Future<Map<String, dynamic>> getMyProfile() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+      final response = await http.get(
+        Uri.parse('$baseUrl/customers/me'),
+        headers: {
+          'app-key': appKey,
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      }
+      return {'success': false, 'message': 'Gagal mengambil profil'};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateMyProfile(
+      int id, Map<String, dynamic> data) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+      final response = await http.patch(
+        Uri.parse('$baseUrl/customers/$id'),
+        headers: {
+          'Content-Type': 'application/json',
+          'app-key': appKey,
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(data),
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': 'Gagal update profil: $e'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getServiceById(int id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+      final response = await http.get(
+        Uri.parse('$baseUrl/services/$id'),
+        headers: {
+          'app-key': appKey,
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      }
+      return {'success': false, 'message': 'Gagal mengambil service'};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getMyBills(
+      {int page = 1, int quantity = 100}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+      final response = await http.get(
+        Uri.parse('$baseUrl/bills/me'),
+        headers: {
+          'app-key': appKey,
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      }
+      return {'success': false, 'message': 'Gagal mengambil tagihan'};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getMyPayments(
+      {int page = 1, int quantity = 100}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+      final response = await http.get(
+        Uri.parse('$baseUrl/payments/me'),
+        headers: {
+          'app-key': appKey,
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      }
+      return {'success': false, 'message': 'Gagal mengambil pembayaran'};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  // ===================== CREATE PAYMENT (FIX) =====================
+  static Future<Map<String, dynamic>?> createPayment(
+      int billId, String filePath) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+
+      print('=== CREATE PAYMENT ===');
+      print('billId: $billId');
+      print('filePath: $filePath');
+      print('token: $token');
+
+      // Tentukan tipe file dari ekstensi
+      final ext = filePath.split('.').last.toLowerCase();
+      final mediaType = ext == 'png'
+          ? MediaType('image', 'png')
+          : MediaType('image', 'jpeg');
+
+      final uri = Uri.parse('$baseUrl/payments');
+      final request = http.MultipartRequest('POST', uri);
+      request.headers.addAll({
+        'app-key': appKey,
+        'Authorization': 'Bearer $token',
+      });
+      request.fields['bill_id'] = billId.toString();
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          filePath,
+          contentType: mediaType,
+        ),
+      );
+
+      print('Sending request...');
+      final streamed = await request.send();
+      final respBody = await streamed.stream.bytesToString();
+
+      print('Status: ${streamed.statusCode}');
+      print('Response: $respBody');
+
+      if (streamed.statusCode == 200 || streamed.statusCode == 201) {
+        final decoded = jsonDecode(respBody);
+        return decoded['data'] ?? decoded;
+      }
+      final decoded = jsonDecode(respBody);
+      return {
+        'success': false,
+        'message': decoded['message'] ?? 'Upload gagal'
+      };
+    } catch (e) {
+      print('createPayment ERROR: $e');
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static String paymentProofUrl(String filename) {
+    return '$baseUrl/payment-proof/$filename';
+  }
+
+  static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+  }
+
+  static Future<Map<String, dynamic>> getMyPaymentDetail(int id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+      final response = await http.get(
+        Uri.parse('$baseUrl/payments/me/$id'),
+        headers: {
+          'app-key': appKey,
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      }
+      return {
+        'success': false,
+        'message': 'Gagal mengambil detail pembayaran'
+      };
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> getMyBillById(int id) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+      final response = await http.get(
+        Uri.parse('$baseUrl/bills/me/$id'),
+        headers: {
+          'app-key': appKey,
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      }
+      return {
+        'success': false,
+        'message': 'Gagal mengambil tagihan detail'
+      };
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
     }
   }
 }

@@ -42,4 +42,7 @@ class CustomerModel {
       'service_id': serviceId,
     };
   }
+  String get initials => name.isNotEmpty ? name[0].toUpperCase() : 'C';
+  String get memberSince => '2024';
+
 }

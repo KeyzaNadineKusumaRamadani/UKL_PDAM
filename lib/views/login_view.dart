@@ -1,8 +1,8 @@
 import 'package:alirin/controllers/auth_controllers.dart';
 import 'package:alirin/service/app_collors.dart';
 import 'package:flutter/material.dart';
-
 import 'main_view.dart';
+import 'customer_dashboard_view.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -40,10 +40,17 @@ class _LoginViewState extends State<LoginView> {
     setState(() => _isLoading = false);
 
     if (result['success'] == true) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MainView()),
-      );
+      if (result['role'] == 'customer') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const CustomerDashboardView()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainView()),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -57,61 +64,51 @@ class _LoginViewState extends State<LoginView> {
 
   @override
   Widget build(BuildContext context) {
+    final screenH = MediaQuery.of(context).size.height;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+          padding: const EdgeInsets.fromLTRB(28, 0, 28, 28),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 10),
+                SizedBox(height: screenH * 0.07),
 
-                // Back button
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back_ios_new,
-                      color: Colors.black, size: 20),
-                  padding: EdgeInsets.zero,
-                ),
-
-                const SizedBox(height: 30),
-
-                // Judul
+                // ── Judul ──
                 const Text(
-                  'Hai admin siap\nmemulai harimu?',
+                  'Selamat Datang!',
                   style: TextStyle(
-                    fontSize: 32,
+                    fontSize: 30,
                     fontWeight: FontWeight.w800,
-                    height: 1.15,
                     color: Colors.black,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 const Text(
-                  'Layani pelanggan dengan ramah',
+                  'Masuk ke akun Anda untuk melanjutkan',
                   style: TextStyle(
                     fontSize: 14,
                     color: Color(0xFF0066D6),
-                    fontWeight: FontWeight.w400,
                   ),
                 ),
 
-                const SizedBox(height: 36),
+                SizedBox(height: screenH * 0.05),
 
-                // Field Email
+                // ── Username ──
                 _buildField(
                   controller: _usernameCtrl,
-                  hint: 'Email',
-                  icon: Icons.mail_outline_rounded,
+                  hint: 'Username',
+                  icon: Icons.person_outline_rounded,
                   validator: (v) =>
-                      v == null || v.isEmpty ? 'Email wajib diisi' : null,
+                      v == null || v.isEmpty ? 'Username wajib diisi' : null,
                 ),
                 const SizedBox(height: 16),
 
-                // Field Password
+                // ── Password ──
                 _buildField(
                   controller: _passwordCtrl,
                   hint: 'Password',
@@ -133,7 +130,7 @@ class _LoginViewState extends State<LoginView> {
 
                 const SizedBox(height: 16),
 
-                // Remember me & Forgot password
+                // ── Remember me & Forgot ──
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -159,10 +156,7 @@ class _LoginViewState extends State<LoginView> {
                         const SizedBox(width: 8),
                         const Text(
                           'Remember me',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.black,
-                          ),
+                          style: TextStyle(fontSize: 12, color: Colors.black),
                         ),
                       ],
                     ),
@@ -187,7 +181,7 @@ class _LoginViewState extends State<LoginView> {
 
                 const SizedBox(height: 28),
 
-                // Tombol Login
+                // ── Tombol Masuk ──
                 SizedBox(
                   width: double.infinity,
                   height: 56,
@@ -214,7 +208,7 @@ class _LoginViewState extends State<LoginView> {
                             ),
                           )
                         : const Text(
-                            'Log in',
+                            'Masuk',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.w700,
@@ -224,32 +218,27 @@ class _LoginViewState extends State<LoginView> {
                   ),
                 ),
 
-                const SizedBox(height: 40),
+                SizedBox(height: screenH * 0.08),
 
-                // Logo + Alirin di bawah
+                // ── Logo di bawah ──
                 Center(
                   child: Column(
                     children: [
                       Image.asset(
                         'assets/Alirin logo.png',
-                        height: 100,
+                        height: 130,
                         fit: BoxFit.contain,
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Alirin',
-                        style: TextStyle(
-                          color: Color(0xFF0066D6),
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
-                        ),
+                      const SizedBox(height: 14),
+                      Image.asset(
+                        'assets/Alirin.png',
+                        
+                        height: 30,
+                        fit: BoxFit.contain,
                       ),
                     ],
                   ),
                 ),
-
-                const SizedBox(height: 20),
               ],
             ),
           ),
@@ -281,7 +270,8 @@ class _LoginViewState extends State<LoginView> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF0066D6), width: 1.5),
+          borderSide:
+              const BorderSide(color: Color(0xFF0066D6), width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -292,8 +282,10 @@ class _LoginViewState extends State<LoginView> {
           borderSide: const BorderSide(color: Colors.red, width: 1.5),
         ),
         hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFFAFAFAF), fontSize: 14),
-        prefixIcon: Icon(icon, color: const Color(0xFF0066D6), size: 20),
+        hintStyle:
+            const TextStyle(color: Color(0xFFAFAFAF), fontSize: 14),
+        prefixIcon:
+            Icon(icon, color: const Color(0xFF0066D6), size: 20),
         suffixIcon: suffixIcon,
         contentPadding:
             const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
