@@ -13,7 +13,7 @@ class AppHeader extends StatelessWidget {
     super.key,
     required this.userName,
     required this.role,
-    this.actions,
+    this.actions, required String title,
   });
 
   @override

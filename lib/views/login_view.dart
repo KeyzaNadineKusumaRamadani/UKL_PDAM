@@ -270,64 +270,6 @@ class _LoginViewState extends State<LoginView> {
                 ),
 
                 const SizedBox(height: 32),
-
-                // ── Divider ──
-                Row(
-                  children: [
-                    Expanded(child: Divider(color: Colors.grey.shade300)),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12),
-                      child: Text(
-                        'Atau login sebagai customer',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    Expanded(child: Divider(color: Colors.grey.shade300)),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                // ── Tombol ke Customer Login ──
-                GestureDetector(
-                  onTap: () => Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const CustomerLoginView()),
-                  ),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0xFF0066D6)),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.person_outline_rounded,
-                            color: Color(0xFF0066D6), size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Login sebagai Customer',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF0066D6),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                SizedBox(height: screenH * 0.06),
-
-                // ── Logo ──
                 Center(
                   child: Column(
                     children: [

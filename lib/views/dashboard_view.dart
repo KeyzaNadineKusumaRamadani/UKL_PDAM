@@ -2,8 +2,8 @@ import 'package:alirin/controllers/auth_controllers.dart';
 import 'package:alirin/controllers/bill_controllers.dart';
 import 'package:alirin/controllers/customer_controllers.dart';
 import 'package:alirin/service/app_collors.dart';
+import 'package:alirin/widgets/bar_chart.dart';
 import 'package:flutter/material.dart';
-
 
 class DashboardView extends StatefulWidget {
   final void Function(int tabIndex)? onNavigate;
@@ -36,7 +36,6 @@ class _DashboardViewState extends State<DashboardView> {
   Widget build(BuildContext context) {
     final admin = authController.adminData;
 
-    // Sort customers by ID descending (terbaru di atas)
     final sortedCustomers = [...customerController.customers]
       ..sort((a, b) => b.id.compareTo(a.id));
 
@@ -144,8 +143,11 @@ class _DashboardViewState extends State<DashboardView> {
                           color: AppColors.primaryLight,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.notifications_outlined,
-                            color: AppColors.primary, size: 20),
+                        child: const Icon(
+                          Icons.notifications_outlined,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
                       ),
                     ],
                   ),
@@ -210,6 +212,16 @@ class _DashboardViewState extends State<DashboardView> {
 
                   const SizedBox(height: 24),
 
+                  // ── Grafik Pendapatan ──
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: RevenueBarChart(
+                      payments: billController.payments,
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
                   // ── Aktivitas Terbaru ──
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 20),
@@ -231,14 +243,19 @@ class _DashboardViewState extends State<DashboardView> {
                         padding: const EdgeInsets.all(30),
                         child: Column(
                           children: [
-                            Icon(Icons.inbox_outlined,
-                                size: 48,
-                                color: AppColors.textMuted.withOpacity(0.5)),
+                            Icon(
+                              Icons.inbox_outlined,
+                              size: 48,
+                              color: AppColors.textMuted.withOpacity(0.5),
+                            ),
                             const SizedBox(height: 8),
-                            const Text('Belum ada aktivitas',
-                                style: TextStyle(
-                                    color: AppColors.textMuted,
-                                    fontSize: 13)),
+                            const Text(
+                              'Belum ada aktivitas',
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 13,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -296,7 +313,7 @@ class _DashboardViewState extends State<DashboardView> {
                             );
                           }),
 
-                          // Customer terbaru — sortedCustomers sudah urut ID terbesar di atas
+                          // Customer terbaru
                           ...sortedCustomers.take(3).map((c) {
                             return _ActivityTile(
                               title: 'Customer Baru Terdaftar',
@@ -314,6 +331,7 @@ class _DashboardViewState extends State<DashboardView> {
                         ],
                       ),
                     ),
+
                   const SizedBox(height: 24),
                 ],
               ],
@@ -325,6 +343,7 @@ class _DashboardViewState extends State<DashboardView> {
   }
 }
 
+// ── Stat Card ──
 class _StatCard extends StatelessWidget {
   final String label;
   final String value;
@@ -396,6 +415,7 @@ class _StatCard extends StatelessWidget {
   }
 }
 
+// ── Activity Tile ──
 class _ActivityTile extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -426,80 +446,86 @@ class _ActivityTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 6,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: iconBg,
-              shape: BoxShape.circle,
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.bgCard,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.shadow,
+              blurRadius: 6,
+              offset: const Offset(0, 1),
             ),
-            child: Icon(icon, color: iconColor, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: iconBg,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    '$subtitle • $time',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Row(
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusBg,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    status,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-                Text(
-                  '$subtitle • $time',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
-                  ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.chevron_right,
+                  color: onTap != null
+                      ? AppColors.primary
+                      : AppColors.textMuted,
+                  size: 18,
                 ),
               ],
             ),
-          ),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusBg,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  status,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Icon(Icons.chevron_right,
-                  color: onTap != null ? AppColors.primary : AppColors.textMuted,
-                  size: 18),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 }
