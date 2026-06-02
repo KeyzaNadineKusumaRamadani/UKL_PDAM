@@ -1,5 +1,5 @@
 import 'dart:math' show max;
-
+ 
 import 'package:alirin/models/bill_models.dart';
 import 'package:alirin/models/customer_models.dart';
 import 'package:alirin/models/model_service.dart';
@@ -8,38 +8,38 @@ import 'package:alirin/service/app_collors.dart';
 import 'package:alirin/views/customer_UploadPembayaran.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+ 
 import 'edit_customer_profile_view.dart';
 import 'login_view.dart';
-
+ 
 class CustomerDashboardView extends StatefulWidget {
   const CustomerDashboardView({super.key});
-
+ 
   @override
   State<CustomerDashboardView> createState() => _CustomerDashboardViewState();
 }
-
+ 
 class _CustomerDashboardViewState extends State<CustomerDashboardView> {
   int _currentIndex = 0;
   CustomerModel? _customer;
   List<BillModel> _bills = [];
   bool _isLoading = true;
-
+ 
   @override
   void initState() {
     super.initState();
     _loadData();
   }
-
+ 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     final profileRes = await ApiService.getMyProfile();
     final billsRes = await ApiService.getMyBills();
-
-    // ✅ FIX: ambil username yang disimpan saat login sebagai fallback
+ 
+    // ✅ FIX username: ambil dari SharedPreferences sebagai fallback
     final prefs = await SharedPreferences.getInstance();
     final savedUsername = prefs.getString('customer_username') ?? '';
-
+ 
     if (mounted) {
       setState(() {
         if (profileRes['success'] == true) {
@@ -47,14 +47,14 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
           final map = data is Map<String, dynamic>
               ? Map<String, dynamic>.from(data)
               : Map<String, dynamic>.from(data);
-
-          // ✅ FIX: kalau username dari API kosong/null, pakai username login
+ 
+          // Kalau username dari API kosong/null, pakai username login
           if ((map['username'] == null ||
                   map['username'].toString().trim().isEmpty) &&
               savedUsername.isNotEmpty) {
             map['username'] = savedUsername;
           }
-
+ 
           _customer = CustomerModel.fromJson(map);
         }
         if (billsRes['success'] == true) {
@@ -69,7 +69,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
       });
     }
   }
-
+ 
   @override
   Widget build(BuildContext context) {
     final tabs = [
@@ -90,7 +90,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
         onRefresh: _loadData,
       ),
     ];
-
+ 
     return Scaffold(
       backgroundColor: Colors.white,
       body: tabs[_currentIndex],
@@ -126,12 +126,12 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
     );
   }
 }
-
+ 
 class _BillBarChart extends StatelessWidget {
   final List<BillModel> bills;
-
+ 
   const _BillBarChart({required this.bills});
-
+ 
   static const List<Color> _barColors = [
     Color(0xFF2563EB),
     Color(0xFF10B981),
@@ -140,7 +140,7 @@ class _BillBarChart extends StatelessWidget {
     Color(0xFF8B5CF6),
     Color(0xFF06B6D4),
   ];
-
+ 
   @override
   Widget build(BuildContext context) {
     final sorted = [...bills]
@@ -151,7 +151,7 @@ class _BillBarChart extends StatelessWidget {
       });
     final data =
         sorted.length > 6 ? sorted.sublist(sorted.length - 6) : sorted;
-
+ 
     if (data.isEmpty) {
       return const Center(
         child: Padding(
@@ -163,12 +163,12 @@ class _BillBarChart extends StatelessWidget {
         ),
       );
     }
-
+ 
     final maxVal = data.fold<double>(
       0,
       (prev, b) => max(prev, b.effectiveTotal),
     );
-
+ 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -351,30 +351,30 @@ class _BillBarChart extends StatelessWidget {
       ),
     );
   }
-
+ 
   String _formatShort(double val) {
     if (val >= 1000000) return 'Rp${(val / 1000000).toStringAsFixed(1)}jt';
     if (val >= 1000) return 'Rp${(val / 1000).toStringAsFixed(0)}rb';
     return 'Rp${val.toInt()}';
   }
 }
-
+ 
 class _CustomerBerandaTab extends StatelessWidget {
   final CustomerModel? customer;
   final List<BillModel> bills;
   final bool isLoading;
-
+ 
   const _CustomerBerandaTab({
     this.customer,
     required this.bills,
     required this.isLoading,
   });
-
+ 
   @override
   Widget build(BuildContext context) {
     if (isLoading) return const Center(child: CircularProgressIndicator());
     final latestBill = bills.isNotEmpty ? bills.first : null;
-
+ 
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -490,28 +490,40 @@ class _CustomerBerandaTab extends StatelessWidget {
                         Flexible(
                           child: Text(
                             latestBill.totalFormatted,
-                            style: const TextStyle(
+                            // ✅ FIX: warna nominal ikut status
+                            style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.danger,
+                              color: latestBill.isPaid
+                                  ? Colors.black
+                                  : AppColors.danger,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: 12),
+                        // ✅ FIX: badge warna ikut status
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.dangerLight,
+                            color: latestBill.isPaid
+                                ? AppColors.successLight
+                                : latestBill.isPending
+                                    ? AppColors.warningLight
+                                    : AppColors.dangerLight,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             latestBill.statusLabel,
-                            style: const TextStyle(
-                              color: AppColors.danger,
+                            style: TextStyle(
+                              color: latestBill.isPaid
+                                  ? AppColors.success
+                                  : latestBill.isPending
+                                      ? AppColors.warning
+                                      : AppColors.danger,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -572,40 +584,42 @@ class _CustomerBerandaTab extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => CustomerUploadBuktiPage(
-                              bill: latestBill,
-                              customer: customer,
+                    // ✅ FIX: tombol Bayar hanya muncul kalau belum lunas
+                    if (!latestBill.isPaid)
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => CustomerUploadBuktiPage(
+                                bill: latestBill,
+                                customer: customer,
+                              ),
                             ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Bayar sekarang',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            SizedBox(width: 4),
+                            Icon(
+                              Icons.arrow_forward,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ],
                         ),
                       ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Bayar sekarang',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          SizedBox(width: 4),
-                          Icon(
-                            Icons.arrow_forward,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -633,11 +647,11 @@ class _CustomerBerandaTab extends StatelessWidget {
     );
   }
 }
-
+ 
 class _HistoryCard extends StatelessWidget {
   final BillModel bill;
   const _HistoryCard({required this.bill});
-
+ 
   @override
   Widget build(BuildContext context) {
     final isPaid = bill.isPaid;
@@ -682,8 +696,9 @@ class _HistoryCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color:
-                      isPaid ? AppColors.successLight : AppColors.dangerLight,
+                  color: isPaid
+                      ? AppColors.successLight
+                      : AppColors.dangerLight,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -709,18 +724,18 @@ class _HistoryCard extends StatelessWidget {
     );
   }
 }
-
+ 
 class _CustomerTagihanTab extends StatelessWidget {
   final List<BillModel> bills;
   final bool isLoading;
   final VoidCallback onRefresh;
-
+ 
   const _CustomerTagihanTab({
     required this.bills,
     required this.isLoading,
     required this.onRefresh,
   });
-
+ 
   @override
   Widget build(BuildContext context) {
     if (isLoading) return const Center(child: CircularProgressIndicator());
@@ -729,7 +744,7 @@ class _CustomerTagihanTab extends StatelessWidget {
       0,
       (sum, item) => sum + item.effectiveTotal,
     );
-
+ 
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -839,11 +854,11 @@ class _CustomerTagihanTab extends StatelessWidget {
     );
   }
 }
-
+ 
 class _BillCardDetailed extends StatelessWidget {
   final BillModel bill;
   const _BillCardDetailed({required this.bill});
-
+ 
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -908,8 +923,9 @@ class _BillCardDetailed extends StatelessWidget {
                       child: Text(
                         bill.statusLabel,
                         style: TextStyle(
-                          color:
-                              bill.isPaid ? AppColors.success : AppColors.danger,
+                          color: bill.isPaid
+                              ? AppColors.success
+                              : AppColors.danger,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -961,7 +977,7 @@ class _BillCardDetailed extends StatelessWidget {
       ),
     );
   }
-
+ 
   Widget _buildActionButton(BuildContext context) {
     if (bill.isUnpaid || bill.isRejected) {
       return SizedBox(
@@ -976,8 +992,9 @@ class _BillCardDetailed extends StatelessWidget {
             );
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor:
-                bill.isRejected ? AppColors.danger : AppColors.primary,
+            backgroundColor: bill.isRejected
+                ? AppColors.danger
+                : AppColors.primary,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
@@ -1043,18 +1060,18 @@ class _BillCardDetailed extends StatelessWidget {
     }
   }
 }
-
+ 
 class _CustomerBayarTab extends StatelessWidget {
   final List<BillModel> bills;
   final bool isLoading;
-
+ 
   const _CustomerBayarTab({required this.bills, required this.isLoading});
-
+ 
   @override
   Widget build(BuildContext context) {
     if (isLoading) return const Center(child: CircularProgressIndicator());
     final unpaidBills = bills.where((b) => b.isUnpaid || b.isRejected).toList();
-
+ 
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -1107,17 +1124,17 @@ class _CustomerBayarTab extends StatelessWidget {
     );
   }
 }
-
+ 
 class _PaymentHistoryCard extends StatelessWidget {
   final BillModel bill;
   const _PaymentHistoryCard({required this.bill});
-
+ 
   @override
   Widget build(BuildContext context) {
     Color statusColor;
     IconData iconData;
     String statusText;
-
+ 
     if (bill.isPending) {
       statusColor = AppColors.warning;
       iconData = Icons.access_time;
@@ -1131,7 +1148,7 @@ class _PaymentHistoryCard extends StatelessWidget {
       iconData = Icons.close;
       statusText = 'Ditolak';
     }
-
+ 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -1223,32 +1240,32 @@ class _PaymentHistoryCard extends StatelessWidget {
     );
   }
 }
-
+ 
 class _CustomerProfileTab extends StatefulWidget {
   final CustomerModel? customer;
   final bool isLoading;
   final VoidCallback onRefresh;
-
+ 
   const _CustomerProfileTab({
     this.customer,
     required this.isLoading,
     required this.onRefresh,
   });
-
+ 
   @override
   State<_CustomerProfileTab> createState() => _CustomerProfileTabState();
 }
-
+ 
 class _CustomerProfileTabState extends State<_CustomerProfileTab> {
   ServiceModel? _service;
   bool _serviceLoading = false;
-
+ 
   @override
   void initState() {
     super.initState();
     _fetchService();
   }
-
+ 
   @override
   void didUpdateWidget(_CustomerProfileTab oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -1256,7 +1273,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
       _fetchService();
     }
   }
-
+ 
   Future<void> _fetchService() async {
     final svcId = widget.customer?.serviceId;
     if (svcId == null) return;
@@ -1273,15 +1290,15 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
       });
     }
   }
-
+ 
   CustomerModel? get customer => widget.customer;
   bool get isLoading => widget.isLoading;
   VoidCallback get onRefresh => widget.onRefresh;
-
+ 
   @override
   Widget build(BuildContext context) {
     if (isLoading) return const Center(child: CircularProgressIndicator());
-
+ 
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -1304,8 +1321,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
             const SizedBox(height: 16),
             Text(
               customer?.name ?? '-',
-              style:
-                  const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             Text(
               'Pelanggan Alirin sejak Jan 2022',
@@ -1313,8 +1329,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
             ),
             const SizedBox(height: 12),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
                 color: AppColors.primaryLight,
                 borderRadius: BorderRadius.circular(20),
@@ -1322,11 +1337,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.person_outline,
-                    color: AppColors.primary,
-                    size: 16,
-                  ),
+                  Icon(Icons.person_outline, color: AppColors.primary, size: 16),
                   SizedBox(width: 8),
                   Text(
                     'Customer',
@@ -1359,8 +1370,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                     customer?.customerNumber ?? '-',
                   ),
                   const SizedBox(height: 16),
-                  _infoRow(
-                      Icons.phone, 'No. Telepon', customer?.phone ?? '-'),
+                  _infoRow(Icons.phone, 'No. Telepon', customer?.phone ?? '-'),
                   const SizedBox(height: 16),
                   _infoRow(
                     Icons.location_on_outlined,
@@ -1371,7 +1381,6 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                   _infoRow(
                     Icons.person_outline,
                     'Username customer',
-                    // ✅ FIX: username sudah terisi dari _loadData via fallback
                     customer?.username ?? '-',
                   ),
                 ],
@@ -1437,15 +1446,12 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                             EditCustomerProfileView(customer: customer!),
                       ),
                     );
-                    if (changed == true) {
-                      onRefresh();
-                    }
+                    if (changed == true) onRefresh();
                   },
                   icon: const Icon(Icons.edit_outlined, size: 18),
                   label: const Text(
                     'Edit Profil',
-                    style:
-                        TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -1466,9 +1472,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                   if (context.mounted) {
                     Navigator.pushAndRemoveUntil(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const LoginView(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const LoginView()),
                       (route) => false,
                     );
                   }
@@ -1491,7 +1495,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
       ),
     );
   }
-
+ 
   Widget _infoRow(IconData icon, String title, String value) {
     return Row(
       children: [
@@ -1508,16 +1512,10 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: const TextStyle(color: Colors.grey, fontSize: 10),
-              ),
+              Text(title, style: const TextStyle(color: Colors.grey, fontSize: 10)),
               Text(
                 value,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                 overflow: TextOverflow.ellipsis,
               ),
             ],
@@ -1526,7 +1524,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
       ],
     );
   }
-
+ 
   Widget _infoRowText(String title, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,

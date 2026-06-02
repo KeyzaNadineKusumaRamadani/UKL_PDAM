@@ -22,7 +22,6 @@ class ApiService {
     };
   }
 
-  // ===================== AUTH =====================
   static Future<Map<String, dynamic>> login(String username, String password) async {
     try {
       final response = await http.post(
@@ -386,7 +385,7 @@ class ApiService {
     }
   }
 
-  // ===================== CREATE PAYMENT (FIX) =====================
+
   static Future<Map<String, dynamic>?> createPayment(
       int billId, String filePath) async {
     try {

@@ -3,6 +3,7 @@ import 'package:alirin/controllers/auth_controllers.dart';
 import 'package:alirin/service/app_collors.dart';
 import 'package:flutter/material.dart';
 
+
 class AppHeader extends StatelessWidget {
   final String title;
   final List<Widget>? actions;
@@ -16,7 +17,6 @@ class AppHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final admin = authController.adminData;
-
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       decoration: const BoxDecoration(
