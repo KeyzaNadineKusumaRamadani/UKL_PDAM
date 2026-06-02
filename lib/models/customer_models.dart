@@ -20,15 +20,21 @@ class CustomerModel {
   });
 
   factory CustomerModel.fromJson(Map<String, dynamic> json) {
+    // ✅ FIX: username ada di dalam nested object "user"
+    final user = json['user'];
+    final username = (user != null && user['username'] != null)
+        ? user['username'].toString()
+        : (json['username'] ?? '');
+
     return CustomerModel(
       id: json['id'] ?? 0,
-      username: json['username'] ?? '',
+      username: username,
       name: json['name'] ?? '',
       phone: json['phone'] ?? '',
       address: json['address'] ?? '',
       customerNumber: json['customer_number']?.toString() ?? '',
       serviceId: json['service_id'],
-      serviceName: json['service_name'] ?? '',
+      serviceName: json['service']?['name'] ?? json['service_name'] ?? '',
     );
   }
 
@@ -42,7 +48,7 @@ class CustomerModel {
       'service_id': serviceId,
     };
   }
+
   String get initials => name.isNotEmpty ? name[0].toUpperCase() : 'C';
   String get memberSince => '2024';
-
 }

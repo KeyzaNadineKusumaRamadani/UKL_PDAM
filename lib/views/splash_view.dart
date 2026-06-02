@@ -299,7 +299,7 @@ class _SplashViewState extends State<SplashView> with TickerProviderStateMixin {
         // Navigasi mutlak menggunakan bawaan Flutter (Menjamin tidak macet akibat problem GetX)
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => const LoginView()),
+          MaterialPageRoute(builder: (context) => const RoleView()),
           (route) => false, // Menghapus halaman splash screen dari memori HP
         );
       },

@@ -1,12 +1,13 @@
 import 'dart:math' show max;
-import 'package:alirin/models/customer_models.dart';
-import 'package:alirin/models/model_service.dart';
-import 'package:alirin/views/customer_UploadPembayaran.dart';
-import 'package:flutter/material.dart';
+
 import 'package:alirin/models/bill_models.dart';
 import 'package:alirin/models/customer_models.dart';
+import 'package:alirin/models/model_service.dart';
 import 'package:alirin/service/api_service.dart';
 import 'package:alirin/service/app_collors.dart';
+import 'package:alirin/views/customer_UploadPembayaran.dart';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'edit_customer_profile_view.dart';
 import 'login_view.dart';
@@ -35,15 +36,26 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
     final profileRes = await ApiService.getMyProfile();
     final billsRes = await ApiService.getMyBills();
 
+    // ✅ FIX: ambil username yang disimpan saat login sebagai fallback
+    final prefs = await SharedPreferences.getInstance();
+    final savedUsername = prefs.getString('customer_username') ?? '';
+
     if (mounted) {
       setState(() {
         if (profileRes['success'] == true) {
           final data = profileRes['data'] ?? profileRes;
-          _customer = CustomerModel.fromJson(
-            data is Map<String, dynamic>
-                ? data
-                : Map<String, dynamic>.from(data),
-          );
+          final map = data is Map<String, dynamic>
+              ? Map<String, dynamic>.from(data)
+              : Map<String, dynamic>.from(data);
+
+          // ✅ FIX: kalau username dari API kosong/null, pakai username login
+          if ((map['username'] == null ||
+                  map['username'].toString().trim().isEmpty) &&
+              savedUsername.isNotEmpty) {
+            map['username'] = savedUsername;
+          }
+
+          _customer = CustomerModel.fromJson(map);
         }
         if (billsRes['success'] == true) {
           final bData = billsRes['data'];
@@ -137,7 +149,8 @@ class _BillBarChart extends StatelessWidget {
         final bDate = b.year * 100 + b.month;
         return aDate.compareTo(bDate);
       });
-    final data = sorted.length > 6 ? sorted.sublist(sorted.length - 6) : sorted;
+    final data =
+        sorted.length > 6 ? sorted.sublist(sorted.length - 6) : sorted;
 
     if (data.isEmpty) {
       return const Center(
@@ -374,7 +387,6 @@ class _CustomerBerandaTab extends StatelessWidget {
                   backgroundColor: AppColors.primaryLight,
                   child: Icon(Icons.person, color: AppColors.primary),
                 ),
-
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -667,11 +679,11 @@ class _HistoryCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isPaid
-                      ? AppColors.successLight
-                      : AppColors.dangerLight,
+                  color:
+                      isPaid ? AppColors.successLight : AppColors.dangerLight,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -843,7 +855,11 @@ class _BillCardDetailed extends StatelessWidget {
           color: bill.isUnpaid ? AppColors.danger : Colors.grey[200]!,
         ),
         boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
         ],
       ),
       child: Column(
@@ -892,9 +908,8 @@ class _BillCardDetailed extends StatelessWidget {
                       child: Text(
                         bill.statusLabel,
                         style: TextStyle(
-                          color: bill.isPaid
-                              ? AppColors.success
-                              : AppColors.danger,
+                          color:
+                              bill.isPaid ? AppColors.success : AppColors.danger,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -961,9 +976,8 @@ class _BillCardDetailed extends StatelessWidget {
             );
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: bill.isRejected
-                ? AppColors.danger
-                : AppColors.primary,
+            backgroundColor:
+                bill.isRejected ? AppColors.danger : AppColors.primary,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
@@ -1290,7 +1304,8 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
             const SizedBox(height: 16),
             Text(
               customer?.name ?? '-',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style:
+                  const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             Text(
               'Pelanggan Alirin sejak Jan 2022',
@@ -1298,7 +1313,8 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
             ),
             const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
                 color: AppColors.primaryLight,
                 borderRadius: BorderRadius.circular(20),
@@ -1343,7 +1359,8 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                     customer?.customerNumber ?? '-',
                   ),
                   const SizedBox(height: 16),
-                  _infoRow(Icons.phone, 'No. Telepon', customer?.phone ?? '-'),
+                  _infoRow(
+                      Icons.phone, 'No. Telepon', customer?.phone ?? '-'),
                   const SizedBox(height: 16),
                   _infoRow(
                     Icons.location_on_outlined,
@@ -1354,6 +1371,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                   _infoRow(
                     Icons.person_outline,
                     'Username customer',
+                    // ✅ FIX: username sudah terisi dari _loadData via fallback
                     customer?.username ?? '-',
                   ),
                 ],
@@ -1374,14 +1392,12 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const Divider(height: 30),
-
                   _infoRowText(
                     'Jenis layanan',
                     _serviceLoading
                         ? 'Memuat...'
                         : (_service?.name ?? customer?.serviceName ?? '-'),
                   ),
-
                   if (_serviceLoading) ...[
                     const SizedBox(height: 12),
                     const Center(
@@ -1409,7 +1425,6 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
               ),
             ),
             const SizedBox(height: 30),
-
             if (customer != null)
               SizedBox(
                 width: double.infinity,
@@ -1429,7 +1444,8 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                   icon: const Icon(Icons.edit_outlined, size: 18),
                   label: const Text(
                     'Edit Profil',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                    style:
+                        TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -1442,7 +1458,6 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                 ),
               ),
             const SizedBox(height: 12),
-
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -1453,7 +1468,7 @@ class _CustomerProfileTabState extends State<_CustomerProfileTab> {
                       context,
                       MaterialPageRoute(
                         builder: (_) => const LoginView(),
-                      ), // ← FIXED
+                      ),
                       (route) => false,
                     );
                   }

@@ -1,9 +1,12 @@
 import 'package:alirin/controllers/auth_controllers.dart';
 import 'package:alirin/service/app_collors.dart';
+import 'package:alirin/views/role_view.dart';
 import 'package:flutter/material.dart';
-
 import 'main_view.dart';
+import 'register_view.dart';
 import 'customer_dashboard_view.dart';
+import 'customer_loginView.dart';
+import 'splash_view.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -14,7 +17,6 @@ class LoginView extends StatefulWidget {
 
 class _LoginViewState extends State<LoginView> {
   final _formKey = GlobalKey<FormState>();
-
   final _usernameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
 
@@ -31,7 +33,6 @@ class _LoginViewState extends State<LoginView> {
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
 
     final result = await authController.login(
@@ -40,23 +41,18 @@ class _LoginViewState extends State<LoginView> {
     );
 
     if (!mounted) return;
-
     setState(() => _isLoading = false);
 
     if (result['success'] == true) {
       if (result['role'] == 'customer') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (_) => const CustomerDashboardView(),
-          ),
+          MaterialPageRoute(builder: (_) => const CustomerDashboardView()),
         );
       } else {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (_) => const MainView(),
-          ),
+          MaterialPageRoute(builder: (_) => const MainView()),
         );
       }
     } else {
@@ -78,205 +74,292 @@ class _LoginViewState extends State<LoginView> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(height: screenH * 0.12),
+          padding: const EdgeInsets.fromLTRB(28, 0, 28, 28),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: screenH * 0.05),
 
-                  // ───── TITLE ─────
-                  const Text(
-                    'Selamat Datang!',
-                    style: TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.black,
+                // ── Tombol kembali ──
+                GestureDetector(
+                  onTap: () => Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RoleView()),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_back_ios_new,
+                    color: Colors.black,
+                    size: 22,
+                  ),
+                ),
+
+                SizedBox(height: screenH * 0.04),
+
+                // ── Judul ──
+                const Text(
+                  'Hai Selamat\nDatang Kembali!',
+                  style: TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.black,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Masuk sebagai admin PDAM',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF0066D6),
+                  ),
+                ),
+
+                SizedBox(height: screenH * 0.05),
+
+                // ── Username ──
+                _buildField(
+                  controller: _usernameCtrl,
+                  hint: 'Username',
+                  icon: Icons.person_outline_rounded,
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'Username wajib diisi' : null,
+                ),
+                const SizedBox(height: 16),
+
+                // ── Password ──
+                _buildField(
+                  controller: _passwordCtrl,
+                  hint: 'Password',
+                  icon: Icons.lock_outline_rounded,
+                  obscure: _obscure,
+                  suffixIcon: IconButton(
+                    onPressed: () => setState(() => _obscure = !_obscure),
+                    icon: Icon(
+                      _obscure
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: const Color(0xFF0066D6),
+                      size: 20,
                     ),
                   ),
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'Password wajib diisi' : null,
+                ),
 
-                  const SizedBox(height: 8),
+                const SizedBox(height: 16),
 
-                  const Text(
-                    'Masuk ke akun Anda untuk melanjutkan',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF0066D6),
+                // ── Remember me & Forgot ──
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: Checkbox(
+                            value: _rememberMe,
+                            activeColor: const Color(0xFF0066D6),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            side: const BorderSide(
+                              color: Color(0xFF0066D6),
+                              width: 1.5,
+                            ),
+                            onChanged: (v) =>
+                                setState(() => _rememberMe = v ?? false),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Remember me',
+                          style: TextStyle(fontSize: 12, color: Colors.black),
+                        ),
+                      ],
                     ),
-                  ),
-
-                  SizedBox(height: screenH * 0.06),
-
-                  // ───── USERNAME ─────
-                  _buildField(
-                    controller: _usernameCtrl,
-                    hint: 'Username',
-                    icon: Icons.person_outline_rounded,
-                    validator: (v) {
-                      if (v == null || v.isEmpty) {
-                        return 'Username wajib diisi';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // ───── PASSWORD ─────
-                  _buildField(
-                    controller: _passwordCtrl,
-                    hint: 'Password',
-                    icon: Icons.lock_outline_rounded,
-                    obscure: _obscure,
-                    suffixIcon: IconButton(
-                      onPressed: () {
-                        setState(() => _obscure = !_obscure);
-                      },
-                      icon: Icon(
-                        _obscure
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        color: const Color(0xFF0066D6),
-                        size: 20,
+                    TextButton(
+                      onPressed: () {},
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text(
+                        'Forgot password?',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.black,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                     ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) {
-                        return 'Password wajib diisi';
-                      }
-                      return null;
-                    },
-                  ),
+                  ],
+                ),
 
-                  const SizedBox(height: 16),
+                const SizedBox(height: 28),
 
-                  // ───── REMEMBER ─────
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          SizedBox(
+                // ── Tombol Masuk ──
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _login,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0066D6),
+                      disabledBackgroundColor:
+                          const Color(0xFF0066D6).withOpacity(0.6),
+                      elevation: 6,
+                      shadowColor: const Color(0xFF0066D6).withOpacity(0.35),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
                             width: 22,
                             height: 22,
-                            child: Checkbox(
-                              value: _rememberMe,
-                              activeColor: const Color(0xFF0066D6),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                              side: const BorderSide(
-                                color: Color(0xFF0066D6),
-                                width: 1.5,
-                              ),
-                              onChanged: (v) {
-                                setState(() {
-                                  _rememberMe = v ?? false;
-                                });
-                              },
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
                             ),
-                          ),
-
-                          const SizedBox(width: 8),
-
-                          const Text(
-                            'Remember me',
+                          )
+                        : const Text(
+                            'Masuk',
                             style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.black,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
                             ),
                           ),
-                        ],
-                      ),
+                  ),
+                ),
 
-                      TextButton(
-                        onPressed: () {},
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: Size.zero,
-                          tapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
+                const SizedBox(height: 20),
+
+                // ── Daftar akun admin baru ──
+                Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Belum punya akun? ',
+                        style: TextStyle(
+                            fontSize: 13, color: Color(0xFF6B7280)),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const RegisterView()),
                         ),
                         child: const Text(
-                          'Forgot password?',
+                          'Daftar di sini',
                           style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.black,
+                            fontSize: 13,
+                            color: Color(0xFF0066D6),
+                            fontWeight: FontWeight.w600,
                             decoration: TextDecoration.underline,
                           ),
                         ),
                       ),
                     ],
                   ),
+                ),
 
-                  const SizedBox(height: 28),
+                const SizedBox(height: 32),
 
-                  // ───── BUTTON LOGIN ─────
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _login,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0066D6),
-                        disabledBackgroundColor:
-                            const Color(0xFF0066D6).withOpacity(0.6),
-                        elevation: 6,
-                        shadowColor:
-                            const Color(0xFF0066D6).withOpacity(0.35),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                // ── Divider ──
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: Colors.grey.shade300)),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        'Atau login sebagai customer',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
                         ),
                       ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2.5,
-                              ),
-                            )
-                          : const Text(
-                              'Masuk',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
                     ),
+                    Expanded(child: Divider(color: Colors.grey.shade300)),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // ── Tombol ke Customer Login ──
+                GestureDetector(
+                  onTap: () => Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const CustomerLoginView()),
                   ),
-
-                  SizedBox(height: screenH * 0.12),
-
-                  // ───── LOGO ─────
-                  Center(
-                    child: Column(
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0xFF0066D6)),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Image.asset(
-                          'assets/Alirin logo.png',
-                          height: 110,
-                          fit: BoxFit.contain,
-                        ),
-
-                        const SizedBox(height: 10),
-
-                        Image.asset(
-                          'assets/Alirin.png',
-                          height: 28,
-                          fit: BoxFit.contain,
+                        Icon(Icons.person_outline_rounded,
+                            color: Color(0xFF0066D6), size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Login sebagai Customer',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF0066D6),
+                          ),
                         ),
                       ],
                     ),
                   ),
+                ),
 
-                  const SizedBox(height: 30),
-                ],
-              ),
+                SizedBox(height: screenH * 0.06),
+
+                // ── Logo ──
+                Center(
+                  child: Column(
+                    children: [
+                      Image.asset(
+                        'assets/Alirin logo.png',
+                        height: 100,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.water_drop,
+                          size: 60,
+                          color: Color(0xFF0066D6),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Image.asset(
+                        'assets/Alirin.png',
+                        height: 26,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Text(
+                          'Alirin',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0066D6),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
             ),
           ),
         ),
@@ -295,68 +378,34 @@ class _LoginViewState extends State<LoginView> {
     return TextFormField(
       controller: controller,
       obscureText: obscure,
-      style: const TextStyle(
-        color: Colors.black,
-        fontSize: 14,
-      ),
+      style: const TextStyle(color: Colors.black, fontSize: 14),
       decoration: InputDecoration(
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Color(0xFF8D8D8D),
-          ),
+          borderSide: const BorderSide(color: Color(0xFF8D8D8D)),
         ),
-
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Color(0xFF8D8D8D),
-          ),
+          borderSide: const BorderSide(color: Color(0xFF8D8D8D)),
         ),
-
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Color(0xFF0066D6),
-            width: 1.5,
-          ),
+          borderSide: const BorderSide(color: Color(0xFF0066D6), width: 1.5),
         ),
-
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Colors.red,
-          ),
+          borderSide: const BorderSide(color: Colors.red),
         ),
-
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: Colors.red,
-            width: 1.5,
-          ),
+          borderSide: const BorderSide(color: Colors.red, width: 1.5),
         ),
-
         hintText: hint,
-
-        hintStyle: const TextStyle(
-          color: Color(0xFFAFAFAF),
-          fontSize: 14,
-        ),
-
-        prefixIcon: Icon(
-          icon,
-          color: const Color(0xFF0066D6),
-          size: 20,
-        ),
-
+        hintStyle: const TextStyle(color: Color(0xFFAFAFAF), fontSize: 14),
+        prefixIcon: Icon(icon, color: const Color(0xFF0066D6), size: 20),
         suffixIcon: suffixIcon,
-
-        contentPadding: const EdgeInsets.symmetric(
-          vertical: 16,
-          horizontal: 16,
-        ),
-
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         filled: true,
         fillColor: Colors.white,
       ),

@@ -36,6 +36,25 @@ class ApiService {
     }
   }
 
+  // ===================== REGISTER ADMIN =====================
+  static Future<Map<String, dynamic>> registerAdmin(Map<String, dynamic> data) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/admins'),
+        headers: headersNoAuth(),
+        body: jsonEncode(data),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final body = jsonDecode(response.body);
+        return {'success': true, ...body};
+      }
+      final body = jsonDecode(response.body);
+      return {'success': false, 'message': body['message'] ?? 'Registrasi gagal'};
+    } catch (e) {
+      return {'success': false, 'message': 'Koneksi gagal: $e'};
+    }
+  }
+
   // ===================== ADMIN ME =====================
   static Future<Map<String, dynamic>> getAdminMe(String token) async {
     try {
