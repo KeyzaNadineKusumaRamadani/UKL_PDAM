@@ -1,44 +1,28 @@
 import 'dart:math' show max;
+
 import 'package:alirin/models/payment_models.dart';
 import 'package:alirin/service/app_collors.dart';
 import 'package:flutter/material.dart';
+
 
 class RevenueBarChart extends StatelessWidget {
   final List<PaymentModel> payments;
 
   const RevenueBarChart({super.key, required this.payments});
 
-  static const List<Color> _barColors = [
-    Color(0xFF2563EB),
-    Color(0xFF10B981),
-    Color(0xFFF59E0B),
-    Color(0xFFEF4444),
-    Color(0xFF8B5CF6),
-    Color(0xFF06B6D4),
-    Color(0xFFEC4899),
-    Color(0xFF14B8A6),
-    Color(0xFFF97316),
-    Color(0xFF6366F1),
-    Color(0xFF84CC16),
-    Color(0xFFE11D48),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    // Ambil semua tahun yang ada di data payments
-    final years = payments
-        .where((p) => p.isVerified && p.year > 0)
-        .map((p) => p.year)
-        .toSet()
-        .toList()
-      ..add(now.year)
-      ..sort();
-    final uniqueYears = years.toSet().toList()..sort();
+    final years = {
+      ...payments
+          .where((p) => p.isVerified && p.year > 0)
+          .map((p) => p.year),
+      now.year,
+    }.toList()..sort();
 
     return _RevenueBarChartStateful(
       payments: payments,
-      availableYears: uniqueYears,
+      availableYears: years,
       initialYear: now.year,
     );
   }
@@ -60,25 +44,18 @@ class _RevenueBarChartStateful extends StatefulWidget {
       _RevenueBarChartStatefulState();
 }
 
-class _RevenueBarChartStatefulState extends State<_RevenueBarChartStateful> {
+class _RevenueBarChartStatefulState
+    extends State<_RevenueBarChartStateful> {
   late int _selectedYear;
 
   static const List<Color> _barColors = [
-    Color(0xFF2563EB),
-    Color(0xFF10B981),
-    Color(0xFFF59E0B),
-    Color(0xFFEF4444),
-    Color(0xFF8B5CF6),
-    Color(0xFF06B6D4),
-    Color(0xFFEC4899),
-    Color(0xFF14B8A6),
-    Color(0xFFF97316),
-    Color(0xFF6366F1),
-    Color(0xFF84CC16),
-    Color(0xFFE11D48),
+    Color(0xFF2563EB), Color(0xFF10B981), Color(0xFFF59E0B),
+    Color(0xFFEF4444), Color(0xFF8B5CF6), Color(0xFF06B6D4),
+    Color(0xFFEC4899), Color(0xFF14B8A6), Color(0xFFF97316),
+    Color(0xFF6366F1), Color(0xFF84CC16), Color(0xFFE11D48),
   ];
 
-  static const monthNames = [
+  static const _monthNames = [
     '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
     'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
   ];
@@ -90,28 +67,23 @@ class _RevenueBarChartStatefulState extends State<_RevenueBarChartStateful> {
   }
 
   List<_MonthRevenue> _buildMonthlyData() {
-    // Selalu 12 bulan Jan–Des untuk tahun terpilih
-    final Map<int, double> revenueMap = {
-      for (int m = 1; m <= 12; m++) m: 0.0,
-    };
-
+    final revenueMap = {for (int m = 1; m <= 12; m++) m: 0.0};
     for (final p in widget.payments) {
       if (!p.isVerified) continue;
       if (p.year != _selectedYear) continue;
       if (p.month < 1 || p.month > 12) continue;
       revenueMap[p.month] = (revenueMap[p.month] ?? 0) + p.total;
     }
-
-    return List.generate(12, (i) {
-      final month = i + 1;
-      return _MonthRevenue(
-        label: monthNames[month],
-        total: revenueMap[month] ?? 0,
-      );
-    });
+    return List.generate(
+      12,
+      (i) => _MonthRevenue(
+        label: _monthNames[i + 1],
+        total: revenueMap[i + 1] ?? 0,
+      ),
+    );
   }
 
-  String _formatShort(double val) {
+  String _fmt(double val) {
     if (val >= 1000000) return 'Rp${(val / 1000000).toStringAsFixed(1)}jt';
     if (val >= 1000) return 'Rp${(val / 1000).toStringAsFixed(0)}rb';
     return 'Rp${val.toInt()}';
@@ -120,19 +92,13 @@ class _RevenueBarChartStatefulState extends State<_RevenueBarChartStateful> {
   @override
   Widget build(BuildContext context) {
     final data = _buildMonthlyData();
-    final maxVal = data.fold<double>(0, (prev, m) => max(prev, m.total));
+    final maxVal = data.fold<double>(0, (p, m) => max(p, m.total));
     final totalRevenue = data.fold<double>(0, (s, m) => s + m.total);
 
-    final ticks = [
-      0.0,
-      maxVal / 3,
-      (maxVal * 2) / 3,
-      maxVal,
-    ];
-
-    const double barAreaHeight = 130.0;
-    const double totalChartHeight = 155.0;
-    const double labelHeight = 18.0;
+    final ticks = [0.0, maxVal / 3, (maxVal * 2) / 3, maxVal];
+    const double barAreaH = 130.0;
+    const double totalChartH = 155.0;
+    const double labelH = 18.0;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -189,7 +155,7 @@ class _RevenueBarChartStatefulState extends State<_RevenueBarChartStateful> {
                   ],
                 ),
               ),
-              // ── Year Picker ──
+              // Tombol pilih tahun
               GestureDetector(
                 onTap: () => _showYearPicker(context),
                 child: Container(
@@ -234,7 +200,7 @@ class _RevenueBarChartStatefulState extends State<_RevenueBarChartStateful> {
                     style: TextStyle(fontSize: 10, color: Colors.grey),
                   ),
                   Text(
-                    _formatShort(totalRevenue),
+                    _fmt(totalRevenue),
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -250,7 +216,7 @@ class _RevenueBarChartStatefulState extends State<_RevenueBarChartStateful> {
 
           // ── Chart ──
           SizedBox(
-            height: totalChartHeight,
+            height: totalChartH,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -261,14 +227,13 @@ class _RevenueBarChartStatefulState extends State<_RevenueBarChartStateful> {
                     children: List.generate(ticks.length, (i) {
                       final fraction =
                           maxVal == 0 ? 0.0 : ticks[i] / maxVal;
-                      final topPx = labelHeight +
-                          (1.0 - fraction) * barAreaHeight -
-                          6;
+                      final topPx =
+                          labelH + (1.0 - fraction) * barAreaH - 6;
                       return Positioned(
                         top: topPx,
                         right: 0,
                         child: Text(
-                          _formatShort(ticks[i]),
+                          _fmt(ticks[i]),
                           style: const TextStyle(
                             fontSize: 9,
                             color: Colors.grey,
@@ -281,22 +246,21 @@ class _RevenueBarChartStatefulState extends State<_RevenueBarChartStateful> {
                 ),
                 const SizedBox(width: 8),
 
-                // Bar + Grid
+                // Bar area — scrollable horizontal untuk 12 bulan
                 Expanded(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: SizedBox(
-                      // Setiap bar ~36px, 12 bulan = 432px
-                      width: 432,
-                      height: totalChartHeight,
+                      width: 420,
+                      height: totalChartH,
                       child: Stack(
                         children: [
                           // Grid lines
                           ...List.generate(ticks.length, (i) {
                             final fraction =
                                 maxVal == 0 ? 0.0 : ticks[i] / maxVal;
-                            final topPx = labelHeight +
-                                (1.0 - fraction) * barAreaHeight;
+                            final topPx =
+                                labelH + (1.0 - fraction) * barAreaH;
                             return Positioned(
                               top: topPx,
                               left: 0,
@@ -314,30 +278,32 @@ class _RevenueBarChartStatefulState extends State<_RevenueBarChartStateful> {
                           Positioned.fill(
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.end,
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceEvenly,
                               children: List.generate(data.length, (i) {
                                 final item = data[i];
                                 final color =
                                     _barColors[i % _barColors.length];
                                 final barH = maxVal > 0
-                                    ? (item.total / maxVal) * barAreaHeight
+                                    ? (item.total / maxVal) * barAreaH
                                     : 0.0;
 
                                 return Expanded(
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 3),
+                                      horizontal: 3,
+                                    ),
                                     child: Column(
                                       mainAxisAlignment:
                                           MainAxisAlignment.end,
                                       children: [
                                         SizedBox(
-                                          height: labelHeight,
+                                          height: labelH,
                                           child: item.total > 0
                                               ? FittedBox(
                                                   fit: BoxFit.scaleDown,
                                                   child: Text(
-                                                    _formatShort(item.total),
+                                                    _fmt(item.total),
                                                     style: TextStyle(
                                                       fontSize: 8,
                                                       color: color,
@@ -352,7 +318,8 @@ class _RevenueBarChartStatefulState extends State<_RevenueBarChartStateful> {
                                         ),
                                         AnimatedContainer(
                                           duration: const Duration(
-                                              milliseconds: 500),
+                                            milliseconds: 500,
+                                          ),
                                           height: barH,
                                           decoration: barH > 0
                                               ? BoxDecoration(
@@ -385,7 +352,7 @@ class _RevenueBarChartStatefulState extends State<_RevenueBarChartStateful> {
           const Divider(height: 1, color: Color(0xFFF1F5F9)),
           const SizedBox(height: 10),
 
-          // ── Legend (scrollable) ──
+          // ── Legend ──
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -429,67 +396,63 @@ class _RevenueBarChartStatefulState extends State<_RevenueBarChartStateful> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Pilih Tahun',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F172A),
-                ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Pilih Tahun',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0F172A),
               ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: widget.availableYears.map((year) {
-                  final isSelected = year == _selectedYear;
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() => _selectedYear = year);
-                      Navigator.pop(context);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: widget.availableYears.map((year) {
+                final isSelected = year == _selectedYear;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _selectedYear = year);
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.primaryLight,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
                         color: isSelected
                             ? AppColors.primary
-                            : AppColors.primaryLight,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.primary
-                              : AppColors.primary.withOpacity(0.2),
-                        ),
-                      ),
-                      child: Text(
-                        '$year',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: isSelected
-                              ? Colors.white
-                              : AppColors.primary,
-                        ),
+                            : AppColors.primary.withOpacity(0.2),
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
-        );
-      },
+                    child: Text(
+                      '$year',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? Colors.white : AppColors.primary,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
     );
   }
 }

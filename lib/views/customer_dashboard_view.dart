@@ -3,10 +3,13 @@ import 'dart:math' show max;
 import 'package:alirin/models/bill_models.dart';
 import 'package:alirin/models/customer_models.dart';
 import 'package:alirin/models/model_service.dart';
+import 'package:alirin/models/payment_models.dart';
 import 'package:alirin/service/api_service.dart';
 import 'package:alirin/service/app_collors.dart';
 import 'package:alirin/views/customer_UploadPembayaran.dart';
+import 'package:alirin/views/customer_receipt.dart';
 import 'package:flutter/material.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
  
 import 'edit_customer_profile_view.dart';
@@ -36,7 +39,6 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
     final profileRes = await ApiService.getMyProfile();
     final billsRes = await ApiService.getMyBills();
  
-    // ✅ FIX username: ambil dari SharedPreferences sebagai fallback
     final prefs = await SharedPreferences.getInstance();
     final savedUsername = prefs.getString('customer_username') ?? '';
  
@@ -48,7 +50,6 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
               ? Map<String, dynamic>.from(data)
               : Map<String, dynamic>.from(data);
  
-          // Kalau username dari API kosong/null, pakai username login
           if ((map['username'] == null ||
                   map['username'].toString().trim().isEmpty) &&
               savedUsername.isNotEmpty) {
@@ -490,7 +491,6 @@ class _CustomerBerandaTab extends StatelessWidget {
                         Flexible(
                           child: Text(
                             latestBill.totalFormatted,
-                            // ✅ FIX: warna nominal ikut status
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -502,7 +502,6 @@ class _CustomerBerandaTab extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        // ✅ FIX: badge warna ikut status
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
@@ -584,7 +583,6 @@ class _CustomerBerandaTab extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    // ✅ FIX: tombol Bayar hanya muncul kalau belum lunas
                     if (!latestBill.isPaid)
                       ElevatedButton(
                         onPressed: () {
@@ -1031,32 +1029,92 @@ class _BillCardDetailed extends StatelessWidget {
         ),
       );
     } else {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.success),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.check_circle_outline,
-              color: AppColors.success,
-              size: 14,
-            ),
-            SizedBox(width: 6),
-            Text(
-              'Sudah bayar',
-              style: TextStyle(
-                color: AppColors.success,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
+      // ✅ Sudah lunas — tampilkan tombol Lihat Nota
+      return GestureDetector(
+        onTap: () => _bukaNotaDariBill(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.08),
+            border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.receipt_long_rounded,
+                  color: AppColors.primary, size: 14),
+              SizedBox(width: 6),
+              Text(
+                'Lihat Nota',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
+    }
+  }
+
+  Future<void> _bukaNotaDariBill(BuildContext context) async {
+    // Tampilkan loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+    );
+
+    try {
+      final res = await ApiService.getMyPayments(page: 1, quantity: 100);
+      final allPayments = (res['data'] as List? ?? [])
+          .map((e) => PaymentModel.fromJson(e))
+          .toList();
+
+      final payment = allPayments
+          .where((p) => p.billId == bill.id && p.isVerified)
+          .firstOrNull;
+
+      if (!context.mounted) return;
+      Navigator.pop(context); // tutup loading
+
+      if (payment == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nota tidak ditemukan'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CustomerReceiptPage(
+            payment: payment,
+            bill: bill,
+            customer: null,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // tutup loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memuat nota: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 }
@@ -1232,12 +1290,101 @@ class _PaymentHistoryCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const Icon(Icons.chevron_right, color: Colors.grey),
+              // ✅ Tombol Lihat Nota hanya muncul kalau lunas
+              if (bill.isPaid)
+                GestureDetector(
+                  onTap: () => _bukaNotaDariBill(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                          color: AppColors.primary.withOpacity(0.3)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.receipt_long_rounded,
+                            color: AppColors.primary, size: 14),
+                        SizedBox(width: 4),
+                        Text(
+                          'Lihat Nota',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                const Icon(Icons.chevron_right, color: Colors.grey),
             ],
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _bukaNotaDariBill(BuildContext context) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
+    );
+
+    try {
+      final res = await ApiService.getMyPayments(page: 1, quantity: 100);
+      final allPayments = (res['data'] as List? ?? [])
+          .map((e) => PaymentModel.fromJson(e))
+          .toList();
+
+      final payment = allPayments
+          .where((p) => p.billId == bill.id && p.isVerified)
+          .firstOrNull;
+
+      if (!context.mounted) return;
+      Navigator.pop(context);
+
+      if (payment == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nota tidak ditemukan'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CustomerReceiptPage(
+            payment: payment,
+            bill: bill,
+            customer: null,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memuat nota: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }
  

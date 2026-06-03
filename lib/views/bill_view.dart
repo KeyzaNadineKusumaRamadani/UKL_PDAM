@@ -6,10 +6,12 @@ import 'package:alirin/models/customer_models.dart';
 import 'package:alirin/models/payment_models.dart';
 import 'package:alirin/service/app_collors.dart';
 import 'package:alirin/views/app_deader.dart';
+import 'package:alirin/views/customer_receipt.dart';
+import 'package:alirin/widgets/bar_chart.dart';
+import 'package:alirin/widgets/bill_tile.dart';
+import 'package:alirin/widgets/custom_button.dart';
+import 'package:alirin/widgets/custom_textfield.dart';
 import 'package:flutter/material.dart';
-import '../widgets/bill_tile.dart';
-import '../widgets/custom_textfield.dart';
-import '../widgets/custom_button.dart';
 
 class BillView extends StatefulWidget {
   const BillView({super.key});
@@ -23,11 +25,11 @@ class _BillViewState extends State<BillView>
   late TabController _tabCtrl;
   bool _isLoading = false;
 
-  // ── Search & Filter State ──
+  // ── Search & Filter ──
   final _searchCtrl = TextEditingController();
-  int? _filterMonth;   // null = semua bulan
-  int? _filterYear;    // null = semua tahun
   String _searchQuery = '';
+  int? _filterMonth;
+  int? _filterYear;
 
   final List<String> _months = [
     'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -38,6 +40,7 @@ class _BillViewState extends State<BillView>
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 2, vsync: this);
+    _tabCtrl.addListener(() => setState(() {}));
     _load();
   }
 
@@ -63,36 +66,34 @@ class _BillViewState extends State<BillView>
     setState(() => _isLoading = false);
   }
 
-  // ── Filter bills client-side berdasarkan bulan/tahun + nama ──
+  // ── Filter client-side ──
   List<BillModel> get _filteredBills {
     return billController.bills.where((b) {
       final matchName = _searchQuery.isEmpty ||
-          b.customerName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          b.customerNumber.toLowerCase().contains(_searchQuery.toLowerCase());
+          b.customerName.toLowerCase().contains(_searchQuery.toLowerCase());
       final matchMonth = _filterMonth == null || b.month == _filterMonth;
-      final matchYear  = _filterYear  == null || b.year  == _filterYear;
+      final matchYear = _filterYear == null || b.year == _filterYear;
       return matchName && matchMonth && matchYear;
     }).toList();
   }
 
-  // ── Filter payments client-side ──
   List<PaymentModel> get _filteredPayments {
     return billController.payments.where((p) {
       final matchName = _searchQuery.isEmpty ||
           p.customerName.toLowerCase().contains(_searchQuery.toLowerCase());
       final matchMonth = _filterMonth == null || p.month == _filterMonth;
-      final matchYear  = _filterYear  == null || p.year  == _filterYear;
+      final matchYear = _filterYear == null || p.year == _filterYear;
       return matchName && matchMonth && matchYear;
     }).toList();
   }
 
-  bool get _hasActiveFilter =>
+  bool get _hasFilter =>
       _filterMonth != null || _filterYear != null || _searchQuery.isNotEmpty;
 
   void _clearFilters() {
     setState(() {
       _filterMonth = null;
-      _filterYear  = null;
+      _filterYear = null;
       _searchQuery = '';
       _searchCtrl.clear();
     });
@@ -101,7 +102,32 @@ class _BillViewState extends State<BillView>
   void _showDeleteBillDialog(BillModel b) {
     showDialog(
       context: context,
-      builder: (_) => _DeleteBillDialog(bill: b, onDeleted: _load),
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.bgCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Hapus Tagihan?',
+            style: TextStyle(color: AppColors.textPrimary)),
+        content: Text(
+          'Hapus tagihan ${b.customerName} bulan ${b.monthName} ${b.year}?',
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () async {
+              Navigator.pop(context);
+              await billController.removeBill(b.id);
+              _load();
+            },
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -121,30 +147,183 @@ class _BillViewState extends State<BillView>
   void _showVerifyDialog(PaymentModel p) {
     showDialog(
       context: context,
-      builder: (_) => _VerifyDialog(
-        payment: p,
-        onDone: () => _load(),
-        isVerify: true,
-      ),
+      builder: (_) => _VerifyDialog(payment: p, onDone: _load, isVerify: true),
     );
   }
 
   void _showRejectDialog(PaymentModel p) {
     showDialog(
       context: context,
-      builder: (_) => _VerifyDialog(
-        payment: p,
-        onDone: () => _load(),
-        isVerify: false,
+      builder: (_) => _VerifyDialog(payment: p, onDone: _load, isVerify: false),
+    );
+  }
+
+  void _showMonthPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.bgCard,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setModal) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Center(
+              child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2))),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(children: [
+                const Text('Pilih Bulan',
+                    style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold)),
+                const Spacer(),
+                if (_filterMonth != null)
+                  TextButton(
+                    onPressed: () {
+                      setState(() => _filterMonth = null);
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Reset',
+                        style: TextStyle(color: AppColors.danger)),
+                  ),
+              ]),
+            ),
+            const SizedBox(height: 4),
+            GridView.count(
+              shrinkWrap: true,
+              crossAxisCount: 3,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 2.4,
+              children: List.generate(12, (i) {
+                final sel = _filterMonth == i + 1;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _filterMonth = i + 1);
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: sel ? AppColors.primary : AppColors.bgCard2,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: sel ? AppColors.primary : AppColors.border),
+                    ),
+                    child: Text(
+                      _months[i],
+                      style: TextStyle(
+                        color: sel ? Colors.white : AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight:
+                            sel ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showYearPicker() {
+    final now = DateTime.now().year;
+    final years = [now - 1, now, now + 1, now + 2];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.bgCard,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (_) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 8),
+          Center(
+            child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2))),
+          ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(children: [
+              const Text('Pilih Tahun',
+                  style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold)),
+              const Spacer(),
+              if (_filterYear != null)
+                TextButton(
+                  onPressed: () {
+                    setState(() => _filterYear = null);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Reset',
+                      style: TextStyle(color: AppColors.danger)),
+                ),
+            ]),
+          ),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            child: Row(
+              children: years.map((y) {
+                final sel = _filterYear == y;
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() => _filterYear = y);
+                      Navigator.pop(context);
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: sel ? AppColors.primary : AppColors.bgCard2,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: sel ? AppColors.primary : AppColors.border),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text('$y',
+                          style: TextStyle(
+                            color:
+                                sel ? Colors.white : AppColors.textSecondary,
+                            fontWeight:
+                                sel ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 14,
+                          )),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final pendingCount = billController.payments
-        .where((p) => p.isPending)
-        .length;
+    final pendingCount =
+        billController.payments.where((p) => p.isPending).length;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -153,23 +332,21 @@ class _BillViewState extends State<BillView>
           children: [
             AppHeader(title: ''),
 
-            // ── Header: Judul + Tombol Buat ──
+            // ── Header card ──
             Container(
               color: AppColors.bgCard,
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Column(
                 children: [
+                  // Judul + Buat
                   Row(
                     children: [
                       const Expanded(
-                        child: Text(
-                          'Kelola Tagihan',
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        child: Text('Kelola Tagihan',
+                            style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold)),
                       ),
                       ElevatedButton.icon(
                         icon: const Icon(Icons.add, size: 16),
@@ -191,18 +368,14 @@ class _BillViewState extends State<BillView>
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 12),
 
-                  // ── Search Bar ──
+                  // ── Search bar ──
                   TextField(
                     controller: _searchCtrl,
                     onChanged: (v) {
                       setState(() => _searchQuery = v);
-                      // Juga fetch dari API dengan search
-                      if (v.length >= 2 || v.isEmpty) {
-                        _load(search: v);
-                      }
+                      if (v.length >= 2 || v.isEmpty) _load(search: v);
                     },
                     style: const TextStyle(
                         color: AppColors.textPrimary, fontSize: 14),
@@ -228,54 +401,47 @@ class _BillViewState extends State<BillView>
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 10),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: AppColors.border),
-                      ),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide:
+                              const BorderSide(color: AppColors.border)),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: AppColors.border),
-                      ),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide:
+                              const BorderSide(color: AppColors.border)),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                            color: AppColors.primary, width: 1.5),
-                      ),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                              color: AppColors.primary, width: 1.5)),
                     ),
                   ),
-
                   const SizedBox(height: 10),
 
-                  // ── Filter Bulan & Tahun ──
+                  // ── Filter bulan + tahun ──
                   Row(
                     children: [
-                      // Dropdown Bulan
                       Expanded(
-                        child: _FilterDropdown(
+                        child: _FilterChip(
                           icon: Icons.calendar_month_outlined,
                           hint: 'Semua Bulan',
                           value: _filterMonth != null
                               ? _months[_filterMonth! - 1]
                               : null,
-                          onTap: () => _showMonthPicker(),
+                          onTap: _showMonthPicker,
                           isActive: _filterMonth != null,
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Dropdown Tahun
                       Expanded(
-                        child: _FilterDropdown(
+                        child: _FilterChip(
                           icon: Icons.date_range_outlined,
                           hint: 'Semua Tahun',
                           value:
                               _filterYear != null ? '$_filterYear' : null,
-                          onTap: () => _showYearPicker(),
+                          onTap: _showYearPicker,
                           isActive: _filterYear != null,
                         ),
                       ),
-                      // Tombol Reset filter (muncul kalau ada filter aktif)
-                      if (_hasActiveFilter) ...[
+                      if (_hasFilter) ...[
                         const SizedBox(width: 8),
                         GestureDetector(
                           onTap: _clearFilters,
@@ -285,8 +451,8 @@ class _BillViewState extends State<BillView>
                               color: AppColors.dangerLight,
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                  color: AppColors.danger
-                                      .withOpacity(0.3)),
+                                  color:
+                                      AppColors.danger.withOpacity(0.3)),
                             ),
                             child: const Icon(Icons.filter_alt_off,
                                 color: AppColors.danger, size: 18),
@@ -296,31 +462,29 @@ class _BillViewState extends State<BillView>
                     ],
                   ),
 
-                  // ── Info hasil filter ──
-                  if (_hasActiveFilter && !_isLoading) ...[
+                  // Info hasil filter
+                  if (_hasFilter && !_isLoading) ...[
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.info_outline,
-                            size: 13,
-                            color: AppColors.primary.withOpacity(0.7)),
-                        const SizedBox(width: 4),
-                        Text(
-                          _tabCtrl.index == 0
-                              ? '${_filteredBills.length} tagihan ditemukan'
-                              : '${_filteredPayments.length} pembayaran ditemukan',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppColors.primary.withOpacity(0.8),
-                          ),
+                    Row(children: [
+                      Icon(Icons.info_outline,
+                          size: 13,
+                          color: AppColors.primary.withOpacity(0.7)),
+                      const SizedBox(width: 4),
+                      Text(
+                        _tabCtrl.index == 0
+                            ? '${_filteredBills.length} tagihan ditemukan'
+                            : '${_filteredPayments.length} pembayaran ditemukan',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.primary.withOpacity(0.8),
                         ),
-                      ],
-                    ),
+                      ),
+                    ]),
                   ],
 
                   const SizedBox(height: 12),
 
-                  // ── TabBar ──
+                  // ── Tab Bar ──
                   Container(
                     decoration: BoxDecoration(
                       color: AppColors.bgCard2,
@@ -337,7 +501,6 @@ class _BillViewState extends State<BillView>
                       unselectedLabelColor: AppColors.textMuted,
                       labelStyle: const TextStyle(
                           fontWeight: FontWeight.w600, fontSize: 13),
-                      onTap: (_) => setState(() {}),
                       tabs: [
                         const Tab(text: 'Daftar Tagihan'),
                         Tab(
@@ -352,16 +515,13 @@ class _BillViewState extends State<BillView>
                                       horizontal: 6, vertical: 1),
                                   decoration: BoxDecoration(
                                     color: AppColors.warning,
-                                    borderRadius:
-                                        BorderRadius.circular(10),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: Text(
-                                    '$pendingCount',
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold),
-                                  ),
+                                  child: Text('$pendingCount',
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold)),
                                 ),
                               ],
                             ],
@@ -377,7 +537,7 @@ class _BillViewState extends State<BillView>
 
             const SizedBox(height: 8),
 
-            // ── Konten Tab ──
+            // ── Tab Content ──
             Expanded(
               child: _isLoading
                   ? const Center(
@@ -386,11 +546,11 @@ class _BillViewState extends State<BillView>
                   : TabBarView(
                       controller: _tabCtrl,
                       children: [
-                        // ── Tab 1: Daftar Tagihan ──
+                        // Tab 1: Daftar Tagihan
                         _filteredBills.isEmpty
                             ? _EmptyState(
                                 icon: Icons.receipt_long_outlined,
-                                text: _hasActiveFilter
+                                text: _hasFilter
                                     ? 'Tidak ada tagihan\nyang sesuai filter'
                                     : 'Belum ada tagihan',
                               )
@@ -411,11 +571,11 @@ class _BillViewState extends State<BillView>
                                 ),
                               ),
 
-                        // ── Tab 2: Verifikasi Bayar ──
+                        // Tab 2: Verifikasi Bayar
                         _filteredPayments.isEmpty
                             ? _EmptyState(
                                 icon: Icons.payment_outlined,
-                                text: _hasActiveFilter
+                                text: _hasFilter
                                     ? 'Tidak ada pembayaran\nyang sesuai filter'
                                     : 'Belum ada pembayaran masuk',
                               )
@@ -449,186 +609,6 @@ class _BillViewState extends State<BillView>
     );
   }
 
-  // ── Month Picker Bottom Sheet ──
-  void _showMonthPicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.bgCard,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (_) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 8),
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(2)),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                const Text('Pilih Bulan',
-                    style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold)),
-                const Spacer(),
-                if (_filterMonth != null)
-                  TextButton(
-                    onPressed: () {
-                      setState(() => _filterMonth = null);
-                      Navigator.pop(context);
-                    },
-                    child: const Text('Reset',
-                        style: TextStyle(color: AppColors.danger)),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 4),
-          GridView.count(
-            shrinkWrap: true,
-            crossAxisCount: 3,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            childAspectRatio: 2.4,
-            children: List.generate(12, (i) {
-              final isSelected = _filterMonth == i + 1;
-              return GestureDetector(
-                onTap: () {
-                  setState(() => _filterMonth = i + 1);
-                  Navigator.pop(context);
-                },
-                child: Container(
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.primary
-                        : AppColors.bgCard2,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                        color: isSelected
-                            ? AppColors.primary
-                            : AppColors.border),
-                  ),
-                  child: Text(
-                    _months[i],
-                    style: TextStyle(
-                      color: isSelected
-                          ? Colors.white
-                          : AppColors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: isSelected
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Year Picker Bottom Sheet ──
-  void _showYearPicker() {
-    const years = [2024, 2025, 2026, 2027];
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.bgCard,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (_) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 8),
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(2)),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                const Text('Pilih Tahun',
-                    style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold)),
-                const Spacer(),
-                if (_filterYear != null)
-                  TextButton(
-                    onPressed: () {
-                      setState(() => _filterYear = null);
-                      Navigator.pop(context);
-                    },
-                    child: const Text('Reset',
-                        style: TextStyle(color: AppColors.danger)),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-            child: Row(
-              children: years.map((y) {
-                final isSelected = _filterYear == y;
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() => _filterYear = y);
-                      Navigator.pop(context);
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.primary
-                            : AppColors.bgCard2,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                            color: isSelected
-                                ? AppColors.primary
-                                : AppColors.border),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '$y',
-                        style: TextStyle(
-                          color: isSelected
-                              ? Colors.white
-                              : AppColors.textSecondary,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _showCreateBillSheet() async {
     await showModalBottomSheet(
       context: context,
@@ -642,15 +622,16 @@ class _BillViewState extends State<BillView>
   }
 }
 
-// ── Komponen Filter Dropdown ──
-class _FilterDropdown extends StatelessWidget {
+// ── Filter Chip ─────────────────────────────────────────────
+
+class _FilterChip extends StatelessWidget {
   final IconData icon;
   final String hint;
   final String? value;
   final VoidCallback onTap;
   final bool isActive;
 
-  const _FilterDropdown({
+  const _FilterChip({
     required this.icon,
     required this.hint,
     required this.value,
@@ -677,8 +658,9 @@ class _FilterDropdown extends StatelessWidget {
         child: Row(
           children: [
             Icon(icon,
-                size: 16,
-                color: isActive ? AppColors.primary : AppColors.textMuted),
+                size: 15,
+                color:
+                    isActive ? AppColors.primary : AppColors.textMuted),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
@@ -696,7 +678,8 @@ class _FilterDropdown extends StatelessWidget {
             ),
             Icon(Icons.keyboard_arrow_down_rounded,
                 size: 16,
-                color: isActive ? AppColors.primary : AppColors.textMuted),
+                color:
+                    isActive ? AppColors.primary : AppColors.textMuted),
           ],
         ),
       ),
@@ -704,7 +687,8 @@ class _FilterDropdown extends StatelessWidget {
   }
 }
 
-// ── Dialog Verifikasi / Tolak ──
+// ── Dialog Verifikasi / Tolak ────────────────────────────────
+
 class _VerifyDialog extends StatefulWidget {
   final PaymentModel payment;
   final VoidCallback onDone;
@@ -745,24 +729,60 @@ class _VerifyDialogState extends State<_VerifyDialog> {
             result['success'] == null);
 
     Navigator.pop(context);
+    if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          berhasil
-              ? widget.isVerify
-                  ? '✅ Pembayaran ${widget.payment.customerName} berhasil diverifikasi'
-                  : '✅ Pembayaran ${widget.payment.customerName} berhasil ditolak'
-              : '❌ ${msg.isNotEmpty ? msg : 'Gagal memproses pembayaran'}',
+    if (berhasil) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.isVerify
+                ? '✅ Pembayaran ${widget.payment.customerName} berhasil diverifikasi'
+                : '✅ Pembayaran ${widget.payment.customerName} berhasil ditolak',
+          ),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10)),
         ),
-        backgroundColor: berhasil ? AppColors.success : AppColors.danger,
-        behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+      );
 
-    if (berhasil) widget.onDone();
+      widget.onDone();
+
+      if (widget.isVerify && mounted) {
+        final bill = widget.payment.bill ??
+            billController.bills
+                .where((b) => b.id == widget.payment.billId)
+                .firstOrNull;
+
+        final customer = bill != null
+            ? customerController.customers
+                .where((c) => c.id == bill.customerId)
+                .firstOrNull
+            : null;
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CustomerReceiptPage(
+              payment: widget.payment,
+              bill: bill,
+              customer: customer,
+            ),
+          ),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              '❌ ${msg.isNotEmpty ? msg : 'Gagal memproses pembayaran'}'),
+          backgroundColor: AppColors.danger,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    }
   }
 
   @override
@@ -772,7 +792,9 @@ class _VerifyDialogState extends State<_VerifyDialog> {
       shape:
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Text(
-        widget.isVerify ? '✅ Verifikasi Pembayaran?' : '❌ Tolak Pembayaran?',
+        widget.isVerify
+            ? '✅ Verifikasi Pembayaran?'
+            : '❌ Tolak Pembayaran?',
         style:
             const TextStyle(color: AppColors.textPrimary, fontSize: 16),
       ),
@@ -784,8 +806,7 @@ class _VerifyDialogState extends State<_VerifyDialog> {
                 CircularProgressIndicator(color: AppColors.primary),
                 SizedBox(height: 14),
                 Text('Memproses...',
-                    style:
-                        TextStyle(color: AppColors.textSecondary)),
+                    style: TextStyle(color: AppColors.textSecondary)),
               ],
             )
           : RichText(
@@ -801,8 +822,8 @@ class _VerifyDialogState extends State<_VerifyDialog> {
                         fontWeight: FontWeight.bold),
                   ),
                   TextSpan(
-                    text: ' sebesar ${widget.payment.totalFormatted}?\n\n'
-                        'Status tagihan akan berubah menjadi '
+                    text:
+                        ' sebesar ${widget.payment.totalFormatted}?\n\nStatus tagihan akan berubah menjadi '
                         '${widget.isVerify ? 'Lunas' : 'Belum Bayar'}.',
                   ),
                 ],
@@ -819,8 +840,9 @@ class _VerifyDialogState extends State<_VerifyDialog> {
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      widget.isVerify ? AppColors.success : AppColors.danger,
+                  backgroundColor: widget.isVerify
+                      ? AppColors.success
+                      : AppColors.danger,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
                 ),
@@ -833,7 +855,8 @@ class _VerifyDialogState extends State<_VerifyDialog> {
   }
 }
 
-// ── Payment Card ──
+// ── Payment Card ─────────────────────────────────────────────
+
 class _PaymentCard extends StatelessWidget {
   final PaymentModel payment;
   final VoidCallback? onVerify;
@@ -852,11 +875,11 @@ class _PaymentCard extends StatelessWidget {
     final isPending = payment.isPending;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -864,16 +887,16 @@ class _PaymentCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.bg,
-                  borderRadius: BorderRadius.circular(14),
+                  color: AppColors.bgCard2,
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(Icons.receipt,
-                    color: AppColors.textMuted, size: 28),
+                    color: AppColors.textMuted, size: 22),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -883,30 +906,28 @@ class _PaymentCard extends StatelessWidget {
                           ? payment.customerName
                           : 'Customer',
                       style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14),
                     ),
-                    const SizedBox(height: 4),
                     Text(
                       '${payment.monthName} ${payment.year}  •  ${payment.totalFormatted}',
                       style: const TextStyle(
-                          color: AppColors.textMuted, fontSize: 13),
+                          color: AppColors.textMuted, fontSize: 12),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: isVerified
                       ? AppColors.success.withOpacity(0.15)
                       : isRejected
                           ? AppColors.danger.withOpacity(0.15)
                           : AppColors.warning.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   isVerified ? 'Lunas' : isRejected ? 'Ditolak' : 'Pending',
@@ -916,61 +937,65 @@ class _PaymentCard extends StatelessWidget {
                         : isRejected
                             ? AppColors.danger
                             : AppColors.warning,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ],
           ),
 
-          const SizedBox(height: 14),
-
-          if (isVerified)
+          // Banner status lunas / ditolak
+          if (isVerified) ...[
+            const SizedBox(height: 10),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              padding: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
                 color: AppColors.success.withOpacity(0.10),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.check_box, color: AppColors.success, size: 18),
-                  SizedBox(width: 8),
+                  Icon(Icons.check_box, color: AppColors.success, size: 16),
+                  SizedBox(width: 6),
                   Text('Sudah diverifikasi',
                       style: TextStyle(
                           color: AppColors.success,
                           fontWeight: FontWeight.w600,
-                          fontSize: 14)),
+                          fontSize: 13)),
                 ],
               ),
             ),
+          ],
 
-          if (isRejected)
+          if (isRejected) ...[
+            const SizedBox(height: 10),
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              padding: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
                 color: AppColors.danger.withOpacity(0.10),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.close, color: AppColors.danger, size: 20),
-                  SizedBox(width: 8),
+                  Icon(Icons.close, color: AppColors.danger, size: 16),
+                  SizedBox(width: 6),
                   Text('Pembayaran ditolak',
                       style: TextStyle(
                           color: AppColors.danger,
                           fontWeight: FontWeight.w600,
-                          fontSize: 14)),
+                          fontSize: 13)),
                 ],
               ),
             ),
+          ],
 
           if (isPending) ...[
+            const SizedBox(height: 10),
             Row(
               children: [
                 if (onVerify != null)
@@ -978,38 +1003,38 @@ class _PaymentCard extends StatelessWidget {
                     child: GestureDetector(
                       onTap: onVerify,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 9),
                         decoration: BoxDecoration(
                           color: AppColors.success.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Center(
                           child: Text('✅ Verifikasi',
                               style: TextStyle(
                                   color: AppColors.success,
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w600)),
                         ),
                       ),
                     ),
                   ),
                 if (onVerify != null && onReject != null)
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                 if (onReject != null)
                   Expanded(
                     child: GestureDetector(
                       onTap: onReject,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 9),
                         decoration: BoxDecoration(
                           color: AppColors.danger.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Center(
                           child: Text('❌ Tolak',
                               style: TextStyle(
                                   color: AppColors.danger,
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w600)),
                         ),
                       ),
@@ -1024,7 +1049,8 @@ class _PaymentCard extends StatelessWidget {
   }
 }
 
-// ── Form Buat Tagihan ──
+// ── Form Buat Tagihan ────────────────────────────────────────
+
 class _CreateBillSheet extends StatefulWidget {
   const _CreateBillSheet();
 
@@ -1056,13 +1082,11 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCustomer == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pilih customer terlebih dahulu'),
-          backgroundColor: AppColors.danger,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Pilih customer terlebih dahulu'),
+        backgroundColor: AppColors.danger,
+        behavior: SnackBarBehavior.floating,
+      ));
       return;
     }
 
@@ -1074,14 +1098,12 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
     if (services.isNotEmpty) {
       final service = services.first;
       if (usage < service.minUsage || usage > service.maxUsage) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                '❌ Pemakaian harus antara ${service.minUsage.toInt()} - ${service.maxUsage.toInt()} m³ untuk layanan ${service.name}'),
-            backgroundColor: AppColors.danger,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              '❌ Pemakaian harus antara ${service.minUsage.toInt()} - ${service.maxUsage.toInt()} m³ untuk layanan ${service.name}'),
+          backgroundColor: AppColors.danger,
+          behavior: SnackBarBehavior.floating,
+        ));
         return;
       }
     }
@@ -1108,15 +1130,13 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
         msg.toLowerCase().contains('bill') ||
         msg.toLowerCase().contains('tagihan');
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(berhasil
-            ? '✅ Tagihan berhasil dibuat!'
-            : '❌ ${msg.isNotEmpty ? msg : 'Gagal membuat tagihan'}'),
-        backgroundColor: berhasil ? AppColors.success : AppColors.danger,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(berhasil
+          ? '✅ Tagihan berhasil dibuat!'
+          : '❌ ${msg.isNotEmpty ? msg : 'Gagal membuat tagihan'}'),
+      backgroundColor: berhasil ? AppColors.success : AppColors.danger,
+      behavior: SnackBarBehavior.floating,
+    ));
 
     if (berhasil) Navigator.pop(context);
   }
@@ -1132,16 +1152,19 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
   }
 
   String _formatRupiah(double val) {
-    return 'Rp ${val.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
+    return 'Rp ${val.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
   }
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now().year;
+    final years = [now - 1, now, now + 1];
+    if (!years.contains(_selectedYear)) _selectedYear = now;
+
     return Padding(
       padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
+        left: 20, right: 20, top: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       child: Form(
@@ -1153,12 +1176,10 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
             children: [
               Center(
                 child: Container(
-                  width: 40,
-                  height: 4,
+                  width: 40, height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               const SizedBox(height: 16),
@@ -1169,6 +1190,7 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
                       fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
 
+              // ── Pilih Customer (searchable) ──
               const Text('Pilih Customer',
                   style: TextStyle(
                       color: AppColors.textSecondary,
@@ -1177,80 +1199,100 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
               const SizedBox(height: 6),
               GestureDetector(
                 onTap: () async {
-                  final picked = await showModalBottomSheet<CustomerModel>(
+                  final picked =
+                      await showModalBottomSheet<CustomerModel>(
                     context: context,
                     isScrollControlled: true,
                     backgroundColor: AppColors.bgCard,
                     shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(20)),
                     ),
                     builder: (_) => _CustomerSearchPicker(
                       customers: customerController.customers,
                       selected: _selectedCustomer,
                     ),
                   );
-                  if (picked != null) setState(() => _selectedCustomer = picked);
+                  if (picked != null) {
+                    setState(() => _selectedCustomer = picked);
+                  }
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 14),
                   decoration: BoxDecoration(
                     color: AppColors.bgCard2,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: _selectedCustomer != null ? AppColors.primary : AppColors.border,
+                      color: _selectedCustomer != null
+                          ? AppColors.primary
+                          : AppColors.border,
                       width: _selectedCustomer != null ? 1.5 : 1,
                     ),
                   ),
                   child: Row(
                     children: [
                       Icon(
-                        _selectedCustomer != null ? Icons.person : Icons.person_search_outlined,
+                        _selectedCustomer != null
+                            ? Icons.person
+                            : Icons.person_search_outlined,
                         size: 18,
-                        color: _selectedCustomer != null ? AppColors.primary : AppColors.textMuted,
+                        color: _selectedCustomer != null
+                            ? AppColors.primary
+                            : AppColors.textMuted,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: _selectedCustomer != null
                             ? Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
                                     _selectedCustomer!.name,
                                     style: const TextStyle(
-                                      color: AppColors.textPrimary,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                        color: AppColors.textPrimary,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600),
                                   ),
                                   Text(
                                     _selectedCustomer!.username,
-                                    style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                                    style: const TextStyle(
+                                        color: AppColors.textMuted,
+                                        fontSize: 11),
                                   ),
                                 ],
                               )
                             : const Text(
                                 'Ketuk untuk cari customer...',
-                                style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+                                style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 14),
                               ),
                       ),
                       if (_selectedCustomer != null)
                         GestureDetector(
-                          onTap: () => setState(() => _selectedCustomer = null),
-                          child: const Icon(Icons.close, size: 16, color: AppColors.textMuted),
+                          onTap: () =>
+                              setState(() => _selectedCustomer = null),
+                          child: const Icon(Icons.close,
+                              size: 16, color: AppColors.textMuted),
                         )
                       else
-                        const Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: AppColors.textMuted),
+                        const Icon(Icons.keyboard_arrow_down_rounded,
+                            size: 20, color: AppColors.textMuted),
                     ],
                   ),
                 ),
               ),
 
+              // Info layanan customer
               if (_selectedCustomer != null) ...[
                 const SizedBox(height: 6),
                 Builder(builder: (_) {
                   final services = serviceController.services
-                      .where((s) => s.id == _selectedCustomer!.serviceId)
+                      .where(
+                          (s) => s.id == _selectedCustomer!.serviceId)
                       .toList();
                   if (services.isEmpty) return const SizedBox();
                   final s = services.first;
@@ -1261,24 +1303,25 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
                       color: AppColors.primary.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.info_outline,
-                            color: AppColors.primary, size: 14),
-                        const SizedBox(width: 6),
-                        Text(
+                    child: Row(children: [
+                      const Icon(Icons.info_outline,
+                          color: AppColors.primary, size: 14),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
                           '${s.name}: ${s.minUsage.toInt()} - ${s.maxUsage.toInt()} m³  •  Rp ${s.price.toInt()}/m³',
                           style: const TextStyle(
                               color: AppColors.primary, fontSize: 12),
                         ),
-                      ],
-                    ),
+                      ),
+                    ]),
                   );
                 }),
               ],
 
               const SizedBox(height: 12),
 
+              // Bulan & Tahun
               Row(
                 children: [
                   Expanded(
@@ -1292,8 +1335,8 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
                                 fontWeight: FontWeight.w500)),
                         const SizedBox(height: 6),
                         Container(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12),
                           decoration: BoxDecoration(
                             color: AppColors.bgCard2,
                             borderRadius: BorderRadius.circular(12),
@@ -1333,8 +1376,8 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
                                 fontWeight: FontWeight.w500)),
                         const SizedBox(height: 6),
                         Container(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12),
                           decoration: BoxDecoration(
                             color: AppColors.bgCard2,
                             borderRadius: BorderRadius.circular(12),
@@ -1345,17 +1388,18 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
                               isExpanded: true,
                               value: _selectedYear,
                               dropdownColor: AppColors.bgCard,
-                              items: [2024, 2025, 2026, 2027]
+                              items: years
                                   .map((y) => DropdownMenuItem<int>(
                                         value: y,
                                         child: Text('$y',
                                             style: const TextStyle(
-                                                color: AppColors.textPrimary,
+                                                color:
+                                                    AppColors.textPrimary,
                                                 fontSize: 13)),
                                       ))
                                   .toList(),
                               onChanged: (v) =>
-                                  setState(() => _selectedYear = v ?? 2026),
+                                  setState(() => _selectedYear = v ?? now),
                             ),
                           ),
                         ),
@@ -1371,8 +1415,9 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
                 hint: '30041',
                 controller: _meterCtrl,
                 keyboardType: TextInputType.number,
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'No. Meteran wajib diisi' : null,
+                validator: (v) => v == null || v.isEmpty
+                    ? 'No. Meteran wajib diisi'
+                    : null,
               ),
               const SizedBox(height: 12),
 
@@ -1381,8 +1426,8 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
                 hint: _selectedCustomer != null
                     ? () {
                         final services = serviceController.services
-                            .where(
-                                (s) => s.id == _selectedCustomer!.serviceId)
+                            .where((s) =>
+                                s.id == _selectedCustomer!.serviceId)
                             .toList();
                         if (services.isEmpty) return '45';
                         final s = services.first;
@@ -1397,6 +1442,7 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
               ),
               const SizedBox(height: 12),
 
+              // Preview total
               StatefulBuilder(
                 builder: (_, setInner) => Container(
                   padding: const EdgeInsets.all(14),
@@ -1413,7 +1459,8 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
                         children: [
                           const Text('Customer',
                               style: TextStyle(
-                                  color: AppColors.textMuted, fontSize: 12)),
+                                  color: AppColors.textMuted,
+                                  fontSize: 12)),
                           Text(_selectedCustomer?.name ?? '-',
                               style: const TextStyle(
                                   color: AppColors.textSecondary,
@@ -1453,15 +1500,14 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
                       onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.textSecondary,
-                        side:
-                            const BorderSide(color: AppColors.border),
+                        side: const BorderSide(color: AppColors.border),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: const Text('Batal',
-                          style: TextStyle(fontWeight: FontWeight.w600)),
+                          style:
+                              TextStyle(fontWeight: FontWeight.w600)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1482,7 +1528,272 @@ class _CreateBillSheetState extends State<_CreateBillSheet> {
   }
 }
 
-// ── Form Edit Tagihan ──
+// ── Customer Search Picker ────────────────────────────────────
+
+class _CustomerSearchPicker extends StatefulWidget {
+  final List<CustomerModel> customers;
+  final CustomerModel? selected;
+
+  const _CustomerSearchPicker({
+    required this.customers,
+    this.selected,
+  });
+
+  @override
+  State<_CustomerSearchPicker> createState() =>
+      _CustomerSearchPickerState();
+}
+
+class _CustomerSearchPickerState extends State<_CustomerSearchPicker> {
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<CustomerModel> get _filtered {
+    if (_query.isEmpty) return widget.customers;
+    final q = _query.toLowerCase();
+    return widget.customers.where((c) {
+      return c.name.toLowerCase().contains(q) ||
+          c.username.toLowerCase().contains(q) ||
+          (c.customerNumber ?? '').toLowerCase().contains(q) ||
+          c.address.toLowerCase().contains(q);
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _filtered;
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(children: [
+                const Text('Pilih Customer',
+                    style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold)),
+                const Spacer(),
+                Text('${widget.customers.length} customer',
+                    style: const TextStyle(
+                        color: AppColors.textMuted, fontSize: 12)),
+              ]),
+            ),
+            const SizedBox(height: 12),
+
+            // Search field
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: TextField(
+                controller: _searchCtrl,
+                autofocus: true,
+                onChanged: (v) => setState(() => _query = v),
+                style: const TextStyle(
+                    color: AppColors.textPrimary, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Cari nama, username, NIK...',
+                  hintStyle: const TextStyle(
+                      color: AppColors.textMuted, fontSize: 13),
+                  prefixIcon: const Icon(Icons.search,
+                      color: AppColors.textMuted, size: 20),
+                  suffixIcon: _query.isNotEmpty
+                      ? GestureDetector(
+                          onTap: () {
+                            _searchCtrl.clear();
+                            setState(() => _query = '');
+                          },
+                          child: const Icon(Icons.close,
+                              color: AppColors.textMuted, size: 18),
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: AppColors.bg,
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          const BorderSide(color: AppColors.border)),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          const BorderSide(color: AppColors.border)),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                          color: AppColors.primary, width: 1.5)),
+                ),
+              ),
+            ),
+
+            if (_query.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  filtered.isEmpty
+                      ? 'Tidak ada customer yang cocok'
+                      : '${filtered.length} customer ditemukan',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: filtered.isEmpty
+                        ? AppColors.danger
+                        : AppColors.primary.withOpacity(0.8),
+                  ),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 8),
+            const Divider(height: 1, color: AppColors.border),
+
+            // List
+            Flexible(
+              child: filtered.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 32),
+                      child: Column(children: [
+                        Icon(Icons.person_search,
+                            size: 48,
+                            color:
+                                AppColors.textMuted.withOpacity(0.4)),
+                        const SizedBox(height: 10),
+                        const Text('Customer tidak ditemukan',
+                            style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 14)),
+                      ]),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, __) => const Divider(
+                          height: 1,
+                          indent: 68,
+                          color: AppColors.border),
+                      itemBuilder: (_, i) {
+                        final c = filtered[i];
+                        final isSelected =
+                            widget.selected?.id == c.id;
+
+                        final colors = [
+                          const Color(0xFF2563EB),
+                          const Color(0xFF059669),
+                          const Color(0xFFF59E0B),
+                          const Color(0xFF8B5CF6),
+                          const Color(0xFFEF4444),
+                          const Color(0xFF00B8D4),
+                        ];
+                        final avatarColor =
+                            colors[c.name.length % colors.length];
+
+                        final initials = () {
+                          final parts = c.name.trim().split(' ');
+                          if (parts.length >= 2) {
+                            return '${parts[0][0]}${parts[1][0]}'
+                                .toUpperCase();
+                          }
+                          return c.name
+                              .substring(
+                                  0,
+                                  c.name.length >= 2
+                                      ? 2
+                                      : c.name.length)
+                              .toUpperCase();
+                        }();
+
+                        return InkWell(
+                          onTap: () => Navigator.pop(context, c),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 12),
+                            child: Row(children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: avatarColor.withOpacity(0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(initials,
+                                    style: TextStyle(
+                                        color: avatarColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14)),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      c.name,
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? AppColors.primary
+                                            : AppColors.textPrimary,
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.w500,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${c.username}${c.serviceName != null && c.serviceName!.isNotEmpty ? ' • ${c.serviceName}' : ''}',
+                                      style: const TextStyle(
+                                          color: AppColors.textMuted,
+                                          fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (isSelected)
+                                const Icon(Icons.check_circle,
+                                    color: AppColors.primary,
+                                    size: 20),
+                            ]),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Form Edit Tagihan ─────────────────────────────────────────
+
 class _EditBillSheet extends StatefulWidget {
   final BillModel bill;
   const _EditBillSheet({required this.bill});
@@ -1512,10 +1823,10 @@ class _EditBillSheetState extends State<_EditBillSheet> {
     _usageCtrl = TextEditingController(
         text: widget.bill.usageValue.toStringAsFixed(0));
     _selectedMonth = widget.bill.month.clamp(1, 12);
-    _selectedYear = widget.bill.year;
-    if (![2024, 2025, 2026, 2027].contains(_selectedYear)) {
-      _selectedYear = 2026;
-    }
+    final now = DateTime.now().year;
+    final validYears = [now - 1, now, now + 1];
+    _selectedYear =
+        validYears.contains(widget.bill.year) ? widget.bill.year : now;
   }
 
   @override
@@ -1543,26 +1854,25 @@ class _EditBillSheetState extends State<_EditBillSheet> {
     final msg = result['message']?.toString() ?? '';
     final berhasil = result['success'] == true;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(berhasil
-            ? '✅ Tagihan berhasil diupdate!'
-            : '❌ ${msg.isNotEmpty ? msg : 'Gagal mengupdate tagihan'}'),
-        backgroundColor: berhasil ? AppColors.success : AppColors.danger,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(berhasil
+          ? '✅ Tagihan berhasil diupdate!'
+          : '❌ ${msg.isNotEmpty ? msg : 'Gagal mengupdate tagihan'}'),
+      backgroundColor: berhasil ? AppColors.success : AppColors.danger,
+      behavior: SnackBarBehavior.floating,
+    ));
 
     if (berhasil) Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now().year;
+    final years = [now - 1, now, now + 1];
+
     return Padding(
       padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 20,
+        left: 20, right: 20, top: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       child: Form(
@@ -1574,12 +1884,10 @@ class _EditBillSheetState extends State<_EditBillSheet> {
             children: [
               Center(
                 child: Container(
-                  width: 40,
-                  height: 4,
+                  width: 40, height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               const SizedBox(height: 16),
@@ -1599,13 +1907,11 @@ class _EditBillSheetState extends State<_EditBillSheet> {
                       color: AppColors.primary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
-                      widget.bill.displayName,
-                      style: const TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600),
-                    ),
+                    child: Text(widget.bill.displayName,
+                        style: const TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600)),
                   ),
                 ],
               ),
@@ -1624,8 +1930,8 @@ class _EditBillSheetState extends State<_EditBillSheet> {
                                 fontWeight: FontWeight.w500)),
                         const SizedBox(height: 6),
                         Container(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12),
                           decoration: BoxDecoration(
                             color: AppColors.bgCard2,
                             borderRadius: BorderRadius.circular(12),
@@ -1665,8 +1971,8 @@ class _EditBillSheetState extends State<_EditBillSheet> {
                                 fontWeight: FontWeight.w500)),
                         const SizedBox(height: 6),
                         Container(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12),
                           decoration: BoxDecoration(
                             color: AppColors.bgCard2,
                             borderRadius: BorderRadius.circular(12),
@@ -1677,17 +1983,18 @@ class _EditBillSheetState extends State<_EditBillSheet> {
                               isExpanded: true,
                               value: _selectedYear,
                               dropdownColor: AppColors.bgCard,
-                              items: [2024, 2025, 2026, 2027]
+                              items: years
                                   .map((y) => DropdownMenuItem<int>(
                                         value: y,
                                         child: Text('$y',
                                             style: const TextStyle(
-                                                color: AppColors.textPrimary,
+                                                color:
+                                                    AppColors.textPrimary,
                                                 fontSize: 13)),
                                       ))
                                   .toList(),
                               onChanged: (v) =>
-                                  setState(() => _selectedYear = v ?? 2026),
+                                  setState(() => _selectedYear = v ?? now),
                             ),
                           ),
                         ),
@@ -1703,8 +2010,9 @@ class _EditBillSheetState extends State<_EditBillSheet> {
                 hint: '30041',
                 controller: _meterCtrl,
                 keyboardType: TextInputType.number,
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'No. Meteran wajib diisi' : null,
+                validator: (v) => v == null || v.isEmpty
+                    ? 'No. Meteran wajib diisi'
+                    : null,
               ),
               const SizedBox(height: 12),
 
@@ -1726,13 +2034,16 @@ class _EditBillSheetState extends State<_EditBillSheet> {
                       onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.textSecondary,
-                        side: const BorderSide(color: AppColors.border),
+                        side:
+                            const BorderSide(color: AppColors.border),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: const Text('Batal',
-                          style: TextStyle(fontWeight: FontWeight.w600)),
+                          style:
+                              TextStyle(fontWeight: FontWeight.w600)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1753,7 +2064,8 @@ class _EditBillSheetState extends State<_EditBillSheet> {
   }
 }
 
-// ── Empty State ──
+// ── Empty State ───────────────────────────────────────────────
+
 class _EmptyState extends StatelessWidget {
   final IconData icon;
   final String text;
@@ -1767,415 +2079,11 @@ class _EmptyState extends StatelessWidget {
         children: [
           Icon(icon, size: 60, color: AppColors.textMuted.withOpacity(0.4)),
           const SizedBox(height: 12),
-          Text(
-            text,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.textMuted, fontSize: 15),
-          ),
+          Text(text,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  color: AppColors.textMuted, fontSize: 15)),
         ],
-      ),
-    );
-  }
-}
-
-// ── Delete Bill Dialog ──
-class _DeleteBillDialog extends StatefulWidget {
-  final BillModel bill;
-  final VoidCallback onDeleted;
-  const _DeleteBillDialog({required this.bill, required this.onDeleted});
-
-  @override
-  State<_DeleteBillDialog> createState() => _DeleteBillDialogState();
-}
-
-class _DeleteBillDialogState extends State<_DeleteBillDialog> {
-  bool _isDeleting = false;
-
-  Future<void> _hapus() async {
-    setState(() => _isDeleting = true);
-    await billController.removeBill(widget.bill.id);
-    if (!mounted) return;
-    setState(() => _isDeleting = false);
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(
-          '✅ Tagihan ${widget.bill.customerName} bulan ${widget.bill.monthName} berhasil dihapus'),
-      backgroundColor: AppColors.success,
-      behavior: SnackBarBehavior.floating,
-    ));
-    widget.onDeleted();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: AppColors.bgCard,
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Row(children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-              color: AppColors.dangerLight, shape: BoxShape.circle),
-          child: const Icon(Icons.delete_outline,
-              color: AppColors.danger, size: 20),
-        ),
-        const SizedBox(width: 10),
-        const Expanded(
-          child: Text('Hapus Tagihan?',
-              style: TextStyle(
-                  color: AppColors.textPrimary, fontSize: 16)),
-        ),
-      ]),
-      content: _isDeleting
-          ? const Column(mainAxisSize: MainAxisSize.min, children: [
-              CircularProgressIndicator(color: AppColors.primary),
-              SizedBox(height: 12),
-              Text('Menghapus tagihan...',
-                  style: TextStyle(
-                      color: AppColors.textSecondary, fontSize: 13)),
-            ])
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                    text: TextSpan(
-                        style: const TextStyle(
-                            color: AppColors.textSecondary, fontSize: 14),
-                        children: [
-                      const TextSpan(text: 'Hapus tagihan '),
-                      TextSpan(
-                          text:
-                              '${widget.bill.customerName} — ${widget.bill.monthName} ${widget.bill.year}',
-                          style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.bold)),
-                      const TextSpan(text: '?'),
-                    ])),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                      color: AppColors.dangerLight,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                          color: AppColors.danger.withOpacity(0.3))),
-                  child: const Text(
-                    '⚠️ Tagihan yang dihapus tidak dapat dikembalikan.',
-                    style:
-                        TextStyle(color: AppColors.danger, fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-      actions: _isDeleting
-          ? []
-          : [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Batal',
-                    style:
-                        TextStyle(color: AppColors.textSecondary)),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.danger,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                    elevation: 0),
-                onPressed: _hapus,
-                child: const Text('Hapus',
-                    style: TextStyle(color: Colors.white)),
-              ),
-            ],
-    );
-  }
-}
-
-// ── Customer Search Picker ──
-class _CustomerSearchPicker extends StatefulWidget {
-  final List<CustomerModel> customers;
-  final CustomerModel? selected;
-
-  const _CustomerSearchPicker({
-    required this.customers,
-    this.selected,
-  });
-
-  @override
-  State<_CustomerSearchPicker> createState() => _CustomerSearchPickerState();
-}
-
-class _CustomerSearchPickerState extends State<_CustomerSearchPicker> {
-  final _searchCtrl = TextEditingController();
-  String _query = '';
-
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
-  }
-
-  List<CustomerModel> get _filtered {
-    if (_query.isEmpty) return widget.customers;
-    final q = _query.toLowerCase();
-    return widget.customers.where((c) {
-      return c.name.toLowerCase().contains(q) ||
-          c.username.toLowerCase().contains(q) ||
-          (c.customerNumber ?? '').toLowerCase().contains(q) ||
-          c.address.toLowerCase().contains(q);
-    }).toList();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final filtered = _filtered;
-
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle
-            const SizedBox(height: 10),
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  const Text(
-                    'Pilih Customer',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '${widget.customers.length} customer',
-                    style: const TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Search field
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: TextField(
-                controller: _searchCtrl,
-                autofocus: true,
-                onChanged: (v) => setState(() => _query = v),
-                style: const TextStyle(
-                    color: AppColors.textPrimary, fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'Cari nama, username, NIK...',
-                  hintStyle: const TextStyle(
-                      color: AppColors.textMuted, fontSize: 13),
-                  prefixIcon: const Icon(Icons.search,
-                      color: AppColors.textMuted, size: 20),
-                  suffixIcon: _query.isNotEmpty
-                      ? GestureDetector(
-                          onTap: () {
-                            _searchCtrl.clear();
-                            setState(() => _query = '');
-                          },
-                          child: const Icon(Icons.close,
-                              color: AppColors.textMuted, size: 18),
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: AppColors.bg,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.border),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.border),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                        color: AppColors.primary, width: 1.5),
-                  ),
-                ),
-              ),
-            ),
-
-            // Hasil count
-            if (_query.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  filtered.isEmpty
-                      ? 'Tidak ada customer yang cocok'
-                      : '${filtered.length} customer ditemukan',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: filtered.isEmpty
-                        ? AppColors.danger
-                        : AppColors.primary.withOpacity(0.8),
-                  ),
-                ),
-              ),
-            ],
-
-            const SizedBox(height: 8),
-            const Divider(height: 1, color: AppColors.border),
-
-            // List customer
-            Flexible(
-              child: filtered.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 32),
-                      child: Column(
-                        children: [
-                          Icon(Icons.person_search,
-                              size: 48,
-                              color: AppColors.textMuted.withOpacity(0.4)),
-                          const SizedBox(height: 10),
-                          const Text(
-                            'Customer tidak ditemukan',
-                            style: TextStyle(
-                                color: AppColors.textMuted, fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.separated(
-                      shrinkWrap: true,
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, __) => const Divider(
-                          height: 1,
-                          indent: 68,
-                          color: AppColors.border),
-                      itemBuilder: (_, i) {
-                        final c = filtered[i];
-                        final isSelected = widget.selected?.id == c.id;
-
-                        // Warna avatar dari nama
-                        final colors = [
-                          const Color(0xFF2563EB),
-                          const Color(0xFF059669),
-                          const Color(0xFFF59E0B),
-                          const Color(0xFF8B5CF6),
-                          const Color(0xFFEF4444),
-                          const Color(0xFF00B8D4),
-                        ];
-                        final avatarColor =
-                            colors[c.name.length % colors.length];
-
-                        final initials = () {
-                          final parts = c.name.trim().split(' ');
-                          if (parts.length >= 2) {
-                            return '${parts[0][0]}${parts[1][0]}'
-                                .toUpperCase();
-                          }
-                          return c.name
-                              .substring(
-                                  0,
-                                  c.name.length >= 2 ? 2 : c.name.length)
-                              .toUpperCase();
-                        }();
-
-                        return InkWell(
-                          onTap: () => Navigator.pop(context, c),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 12),
-                            child: Row(
-                              children: [
-                                // Avatar
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: avatarColor.withOpacity(0.12),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    initials,
-                                    style: TextStyle(
-                                      color: avatarColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-
-                                // Info
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        c.name,
-                                        style: TextStyle(
-                                          color: isSelected
-                                              ? AppColors.primary
-                                              : AppColors.textPrimary,
-                                          fontWeight: isSelected
-                                              ? FontWeight.bold
-                                              : FontWeight.w500,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        '${c.username}${c.serviceName != null && c.serviceName!.isNotEmpty ? ' • ${c.serviceName}' : ''}',
-                                        style: const TextStyle(
-                                          color: AppColors.textMuted,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-
-                                // Centang kalau sudah dipilih
-                                if (isSelected)
-                                  const Icon(Icons.check_circle,
-                                      color: AppColors.primary, size: 20),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-
-            const SizedBox(height: 8),
-          ],
-        ),
       ),
     );
   }

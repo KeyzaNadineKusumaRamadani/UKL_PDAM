@@ -29,7 +29,6 @@ class PaymentModel {
     final billJson = json['bill'] as Map<String, dynamic>?;
     final customer = billJson?['customer'] as Map<String, dynamic>?;
 
-    // Nama customer dari bill.customer.name
     String name = '';
     if (customer?['name'] != null) {
       name = customer!['name'].toString();
@@ -37,7 +36,6 @@ class PaymentModel {
       name = json['customer_name'].toString();
     }
 
-    // Total dari total_amount
     double total = 0;
     if (json['total_amount'] != null) {
       total = double.tryParse(json['total_amount'].toString()) ?? 0;
@@ -47,27 +45,20 @@ class PaymentModel {
       total = double.tryParse(billJson!['amount'].toString()) ?? 0;
     }
 
-    // Month & Year dari bill
     int month = billJson?['month'] ?? json['month'] ?? 0;
     int year = billJson?['year'] ?? json['year'] ?? 0;
 
-    // Status dari verified boolean
     String status = 'pending';
     if (json['verified'] == true) {
       status = 'lunas';
     }
 
-    // Proof image dari payment_proof
-    String? proofImage = json['payment_proof'] ??
-        json['proof_image'] ??
-        json['file'];
+    String? proofImage =
+        json['payment_proof'] ?? json['proof_image'] ?? json['file'];
 
-    // Created at
-    String? createdAt = json['createdAt'] ??
-        json['created_at'] ??
-        json['payment_date'];
+    String? createdAt =
+        json['createdAt'] ?? json['created_at'] ?? json['payment_date'];
 
-    // Parse nested bill
     BillModel? billModel;
     if (billJson != null) {
       try {
@@ -92,13 +83,26 @@ class PaymentModel {
   String get totalFormatted {
     if (total == 0) return 'Rp 0';
     return 'Rp ${total.toStringAsFixed(0).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]}.',
+    )}';
   }
 
   String get monthName {
     const months = [
-      '', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
     ];
     if (month >= 1 && month <= 12) return months[month];
     return '-';
